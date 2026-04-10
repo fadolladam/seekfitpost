@@ -9,11 +9,13 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
         .modal-active { display: flex !important; }
+        .tag-active { @apply bg-blue-600 text-white border-blue-600 shadow-md; }
+        .tag-inactive { @apply bg-white text-slate-600 border-slate-200 hover:border-blue-400 hover:text-blue-600; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen p-4 md:p-8">
 
-    <div class="max-w-6xl mx-auto">
+    <div class="max-w-7xl mx-auto">
         <!-- Header Section -->
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div>
@@ -21,7 +23,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="16" x2="22" y1="11" y2="11"/></svg>
                     Contact Directory
                 </h1>
-                <p class="text-slate-500 mt-1" id="contact-count-summary">Manage and filter through 1 professional contacts</p>
+                <p class="text-slate-500 mt-1" id="contact-count-summary">Manage and filter through professional contacts</p>
             </div>
             
             <div class="flex gap-2">
@@ -36,27 +38,35 @@
             </div>
         </div>
 
-        <!-- Search and Filters -->
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row gap-4">
-            <div class="relative flex-grow">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                <input 
-                    type="text" 
-                    id="search-input"
-                    placeholder="Search by name, email, position or phone..." 
-                    class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                    oninput="renderContacts()"
-                >
+        <!-- Search and Filters Area -->
+        <div class="space-y-4 mb-6">
+            <!-- Search Input Row -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 items-center">
+                <div class="relative flex-grow w-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    <input 
+                        type="text" 
+                        id="search-input"
+                        placeholder="Search by name, email, position, phone..." 
+                        class="w-full pl-10 pr-10 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                        oninput="onSearchInput()"
+                    >
+                    <button id="clear-search" onclick="clearSearch()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600 hidden">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+                    </button>
+                </div>
+                <button onclick="clearAllFilters()" class="text-sm font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap px-2 py-1 flex items-center gap-1 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    Clear All Filters
+                </button>
             </div>
-            <div class="flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                <select 
-                    id="position-filter"
-                    class="border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    onchange="renderContacts()"
-                >
-                    <option value="All">All Positions</option>
-                </select>
+
+            <!-- Position Tags Row -->
+            <div class="flex flex-col gap-2">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider ml-1">Filter by Position</span>
+                <div id="position-tags-container" class="flex flex-wrap gap-2">
+                    <!-- Tags will be injected here -->
+                </div>
             </div>
         </div>
 
@@ -70,6 +80,7 @@
                             <th class="p-4 font-semibold text-slate-600 text-sm">Position</th>
                             <th class="p-4 font-semibold text-slate-600 text-sm">Email</th>
                             <th class="p-4 font-semibold text-slate-600 text-sm">Phone</th>
+                            <th class="p-4 font-semibold text-slate-600 text-sm">CV(s)</th>
                             <th class="p-4 font-semibold text-slate-600 text-sm text-right">Actions</th>
                         </tr>
                     </thead>
@@ -98,12 +109,12 @@
                 <p class="text-sm text-slate-500 mb-4">
                     Paste your contact list here. Each line should be separated by a Pipe (|) or Tab. 
                     <br>
-                    Format: <code class="bg-slate-100 px-1 rounded">Name|Last Name|Email|Position|Phone</code>
+                    Format: <code class="bg-slate-100 px-1 rounded">Name|Last Name|Email|Position|Phone|CV Links (comma separated)</code>
                 </p>
                 <textarea 
                     id="import-textarea"
                     class="w-full h-64 p-4 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                    placeholder="First|Name|candidate@gmail.com|Position|089666777"
+                    placeholder="Chhuon|Sophat|email@gmail.com|Officer|086223706|https://link1.com, https://link2.com"
                 ></textarea>
             </div>
             <div class="p-6 border-t border-slate-100 flex justify-end gap-3">
@@ -116,13 +127,23 @@
     <script>
         // State
         let contacts = [
-            { id: 1, firstName: 'First', lastName: 'Name', email: 'candidate@gmail.com', position: 'Position', phone: '089666777' }
+            { 
+                id: 1, 
+                firstName: 'Chhuon', 
+                lastName: 'Sophat', 
+                email: 'sophat.chhuon@gmail.com', 
+                position: 'Card Operations Support Officer', 
+                phone: '086223706',
+                cvLink: 'https://drive.google.com/open?id=1PetpVWxzen4tAAUtlhY2Z34_VkuREbkb'
+            }
         ];
+        let selectedPosition = 'All';
 
         // UI Selectors
         const tableBody = document.getElementById('contacts-table-body');
         const searchInput = document.getElementById('search-input');
-        const positionFilter = document.getElementById('position-filter');
+        const clearSearchBtn = document.getElementById('clear-search');
+        const tagsContainer = document.getElementById('position-tags-container');
         const modal = document.getElementById('import-modal');
         const importTextarea = document.getElementById('import-textarea');
         const summaryText = document.getElementById('contact-count-summary');
@@ -152,39 +173,85 @@
                     lastName: parts[1] || '',
                     email: parts[2] || '',
                     position: parts[3] || '',
-                    phone: parts[4] || ''
+                    phone: parts[4] || '',
+                    cvLink: parts[5] || '' // This can be multiple links separated by comma
                 };
             }).filter(Boolean);
 
             contacts = [...contacts, ...newContacts];
-            updateFilterOptions();
+            renderTags();
             renderContacts();
             toggleModal(false);
         }
 
         function deleteContact(id) {
             contacts = contacts.filter(c => c.id !== id);
-            updateFilterOptions();
+            renderTags();
             renderContacts();
         }
 
-        function updateFilterOptions() {
-            const uniquePositions = [...new Set(contacts.map(c => c.position).filter(Boolean))];
-            const currentSelection = positionFilter.value;
+        function clearSearch() {
+            searchInput.value = '';
+            clearSearchBtn.classList.add('hidden');
+            renderContacts();
+        }
+
+        function onSearchInput() {
+            if (searchInput.value) {
+                clearSearchBtn.classList.remove('hidden');
+            } else {
+                clearSearchBtn.classList.add('hidden');
+            }
+            renderContacts();
+        }
+
+        function clearAllFilters() {
+            searchInput.value = '';
+            clearSearchBtn.classList.add('hidden');
+            selectedPosition = 'All';
+            renderTags();
+            renderContacts();
+        }
+
+        function selectPosition(pos) {
+            selectedPosition = pos;
+            renderTags();
+            renderContacts();
+        }
+
+        function renderTags() {
+            const positionCounts = contacts.reduce((acc, c) => {
+                const pos = c.position || 'Unknown';
+                acc[pos] = (acc[pos] || 0) + 1;
+                return acc;
+            }, {});
+
+            const sortedPositions = Object.keys(positionCounts).sort();
             
-            positionFilter.innerHTML = '<option value="All">All Positions</option>';
-            uniquePositions.forEach(pos => {
-                const option = document.createElement('option');
-                option.value = pos;
-                option.textContent = pos;
-                positionFilter.appendChild(option);
+            let html = `
+                <button onclick="selectPosition('All')" class="px-4 py-2 rounded-full border text-sm font-medium transition-all flex items-center gap-2 ${selectedPosition === 'All' ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'}">
+                    All
+                    <span class="px-1.5 py-0.5 rounded-full text-[10px] ${selectedPosition === 'All' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'}">${contacts.length}</span>
+                </button>
+            `;
+
+            sortedPositions.forEach(pos => {
+                const count = positionCounts[pos];
+                const isActive = selectedPosition === pos;
+                html += `
+                    <button onclick="selectPosition('${pos}')" class="px-4 py-2 rounded-full border text-sm font-medium transition-all flex items-center gap-2 ${isActive ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'}">
+                        ${pos}
+                        <span class="px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'}">${count}</span>
+                    </button>
+                `;
             });
-            positionFilter.value = currentSelection;
+
+            tagsContainer.innerHTML = html;
         }
 
         function exportCSV() {
-            const headers = "First Name,Last Name,Email,Position,Phone\n";
-            const csv = contacts.map(c => `${c.firstName},${c.lastName},${c.email},${c.position},${c.phone}`).join('\n');
+            const headers = "First Name,Last Name,Email,Position,Phone,CV Link\n";
+            const csv = contacts.map(c => `${c.firstName},${c.lastName},${c.email},${c.position},${c.phone},"${c.cvLink}"`).join('\n');
             const blob = new Blob([headers + csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -198,12 +265,11 @@
 
         function renderContacts() {
             const searchTerm = searchInput.value.toLowerCase();
-            const filterValue = positionFilter.value;
 
             const filtered = contacts.filter(c => {
-                const searchStr = `${c.firstName} ${c.lastName} ${c.email} ${c.position} ${c.phone}`.toLowerCase();
+                const searchStr = `${c.firstName} ${c.lastName} ${c.email} ${c.position} ${c.phone} ${c.cvLink}`.toLowerCase();
                 const matchesSearch = searchStr.includes(searchTerm);
-                const matchesPosition = filterValue === 'All' || c.position === filterValue;
+                const matchesPosition = selectedPosition === 'All' || c.position === selectedPosition;
                 return matchesSearch && matchesPosition;
             });
 
@@ -213,10 +279,11 @@
             if (filtered.length === 0) {
                 tableBody.innerHTML = `
                     <tr>
-                        <td colspan="5" class="p-12 text-center text-slate-400">
+                        <td colspan="6" class="p-12 text-center text-slate-400">
                             <div class="flex flex-col items-center">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-4 text-slate-200"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                                 <p>No contacts found matching your criteria.</p>
+                                <button onclick="clearAllFilters()" class="mt-4 text-blue-600 font-medium hover:underline text-sm">Clear all filters</button>
                             </div>
                         </td>
                     </tr>
@@ -224,11 +291,24 @@
                 return;
             }
 
-            tableBody.innerHTML = filtered.map(c => `
+            tableBody.innerHTML = filtered.map(c => {
+                // Handle multiple CV links
+                const cvLinks = c.cvLink ? c.cvLink.split(',').map(l => l.trim()).filter(l => l.length > 0) : [];
+                
+                const cvButtonsHtml = cvLinks.length > 0 
+                    ? cvLinks.map((link, idx) => `
+                        <a href="${link}" target="_blank" class="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors bg-blue-50 px-3 py-1 rounded-full whitespace-nowrap">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M9 15h6"/><path d="M9 11h6"/></svg>
+                            ${cvLinks.length > 1 ? `CV ${idx + 1}` : 'View CV'}
+                        </a>
+                      `).join('')
+                    : `<span class="text-slate-300 text-sm italic">No link</span>`;
+
+                return `
                 <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors group">
                     <td class="p-4">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
+                            <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs uppercase">
                                 ${c.firstName[0] || ''}${c.lastName[0] || ''}
                             </div>
                             <span class="font-medium">${c.firstName} ${c.lastName}</span>
@@ -252,6 +332,11 @@
                             ${c.phone}
                         </div>
                     </td>
+                    <td class="p-4">
+                        <div class="flex flex-wrap gap-2">
+                            ${cvButtonsHtml}
+                        </div>
+                    </td>
                     <td class="p-4 text-right">
                         <button 
                             onclick="deleteContact(${c.id})"
@@ -262,11 +347,12 @@
                         </button>
                     </td>
                 </tr>
-            `).join('');
+                `;
+            }).join('');
         }
 
         // Initialize
-        updateFilterOptions();
+        renderTags();
         renderContacts();
     </script>
 </body>
