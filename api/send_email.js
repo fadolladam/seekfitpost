@@ -73,7 +73,7 @@ module.exports = async (req, res) => {
     `;
 
     await transporter.sendMail({
-      from: '"SeekFit HR" <hr@seekfitjob.com>',
+      from: '"Support & HR – SeekFitJob" <hr@seekfitjob.com>',
       to,
       subject,
       html: `<div style="font-family: sans-serif; font-size: 14px; line-height: 1.6; color: #334155;">${body.replace(/\n/g, '<br>')}</div>${htmlSignature}`,
