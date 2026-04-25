@@ -126,12 +126,38 @@
                     </div>
 
                     <div>
-                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-3">Select
-                            Recipient</label>
-                        <select id="recipient-select" onchange="updateContent()"
-                            class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all">
-                            <option value="">Loading data...</option>
+                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-3">Data Source</label>
+                        <div class="flex bg-slate-100 p-1 rounded-xl mb-4">
+                            <button onclick="setSource('sheet')" id="btn-source-sheet" class="flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all bg-white shadow-sm text-indigo-600">Google Sheet</button>
+                            <button onclick="setSource('manual')" id="btn-source-manual" class="flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all text-slate-500 hover:text-slate-700">Manual Input</button>
+                        </div>
+                    </div>
+
+                    <div id="filter-container">
+                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-3">Filter by Position</label>
+                        <select id="position-filter" onchange="updateRecipientList()" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all mb-4">
+                            <option value="all">All Positions</option>
                         </select>
+                    </div>
+
+                    <div id="manual-input-container" class="hidden mb-4">
+                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-3">Manual Recipients (email|name)</label>
+                        <textarea id="manual-recipients" oninput="updateRecipientList()" placeholder="example@mail.com|John Doe&#10;test@mail.com|Jane Smith" class="w-full h-32 bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all custom-scrollbar"></textarea>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest">Select Recipients</label>
+                            <div class="flex gap-2">
+                                <button onclick="toggleAll(true)" class="text-[10px] font-bold text-indigo-600 hover:underline">Select All</button>
+                                <button onclick="toggleAll(false)" class="text-[10px] font-bold text-slate-400 hover:underline">Clear</button>
+                            </div>
+                        </div>
+                        <div id="recipient-list" class="w-full bg-white border border-slate-200 rounded-xl max-h-64 overflow-y-auto custom-scrollbar p-2 space-y-1">
+                            <!-- Recipients will be injected here -->
+                            <p class="text-xs text-slate-400 p-4 text-center font-medium">Loading data...</p>
+                        </div>
+                        <div id="selection-summary" class="mt-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">0 selected</div>
                     </div>
 
                     <div>
@@ -267,6 +293,7 @@
 
     <script>
         let currentType = 'candidate';
+        let currentSource = 'sheet';
         let data = { candidates: [], companies: [] };
         let selectedTemplateIndex = 0;
 
@@ -311,14 +338,20 @@
                 // Fetch Candidates
                 const res1 = await fetch('https://docs.google.com/spreadsheets/d/12l5s9TEQasVcggDjIlL7jLtL9HVdDwLEBufXDv5DGaw/export?format=csv&gid=62699452');
                 const csv1 = await res1.text();
-                Papa.parse(csv1, { header: true, complete: (r) => data.candidates = r.data });
+                Papa.parse(csv1, { 
+                    header: true, 
+                    complete: (r) => {
+                        data.candidates = r.data.filter(i => i.Email && i.Name);
+                        updatePositionFilter();
+                    }
+                });
 
                 // Fetch Companies
                 const res2 = await fetch('https://docs.google.com/spreadsheets/d/12l5s9TEQasVcggDjIlL7jLtL9HVdDwLEBufXDv5DGaw/export?format=csv&gid=416084880');
                 const csv2 = await res2.text();
                 Papa.parse(csv2, {
                     header: true, complete: (r) => {
-                        data.companies = r.data;
+                        data.companies = r.data.filter(i => (i['Company Name'] || i['Company\t Name']) && i['Apply Email']);
                         updateRecipientList();
                     }
                 });
@@ -327,19 +360,51 @@
             }
         }
 
+        function updatePositionFilter() {
+            const filter = document.getElementById('position-filter');
+            const positions = [...new Set(data.candidates.map(c => c.Position).filter(Boolean))].sort();
+            filter.innerHTML = '<option value="all">All Positions</option>' + 
+                positions.map(p => `<option value="${p}">${p}</option>`).join('');
+            updateRecipientList();
+        }
+
+        function setSource(source) {
+            currentSource = source;
+            const btnSheet = document.getElementById('btn-source-sheet');
+            const btnManual = document.getElementById('btn-source-manual');
+            const filterCont = document.getElementById('filter-container');
+            const manualCont = document.getElementById('manual-input-container');
+
+            if (source === 'sheet') {
+                btnSheet.className = 'flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all bg-white shadow-sm text-indigo-600';
+                btnManual.className = 'flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all text-slate-500 hover:text-slate-700';
+                filterCont.style.display = currentType === 'candidate' ? 'block' : 'none';
+                manualCont.style.display = 'none';
+            } else {
+                btnManual.className = 'flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all bg-white shadow-sm text-indigo-600';
+                btnSheet.className = 'flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all text-slate-500 hover:text-slate-700';
+                filterCont.style.display = 'none';
+                manualCont.style.display = 'block';
+            }
+            updateRecipientList();
+        }
+
         function setType(type) {
             currentType = type;
             selectedTemplateIndex = 0;
 
             const bc = document.getElementById('btn-candidate');
             const bco = document.getElementById('btn-company');
+            const filterCont = document.getElementById('filter-container');
 
             if (type === 'candidate') {
                 bc.className = 'flex-1 py-2 rounded-lg text-sm font-bold transition-all bg-white shadow-sm text-indigo-600';
                 bco.className = 'flex-1 py-2 rounded-lg text-sm font-bold transition-all text-slate-500 hover:text-slate-700';
+                if (currentSource === 'sheet') filterCont.style.display = 'block';
             } else {
                 bco.className = 'flex-1 py-2 rounded-lg text-sm font-bold transition-all bg-white shadow-sm text-indigo-600';
                 bc.className = 'flex-1 py-2 rounded-lg text-sm font-bold transition-all text-slate-500 hover:text-slate-700';
+                filterCont.style.display = 'none';
             }
 
             updateRecipientList();
@@ -347,16 +412,59 @@
         }
 
         function updateRecipientList() {
-            const select = document.getElementById('recipient-select');
-            const items = currentType === 'candidate' ? data.candidates : data.companies;
+            const list = document.getElementById('recipient-list');
+            let items = [];
 
-            select.innerHTML = '<option value="">Select a recipient...</option>' + items.map(i => {
-                const name = currentType === 'candidate' ? `${i.Name} ${i['Last Name']}` : (i['Company Name'] || i['Company\t Name']);
-                const email = currentType === 'candidate' ? i.Email : i['Apply Email'];
-                if (!email) return '';
-                return `<option value="${email}" data-name="${name}">${name}</option>`;
-            }).join('');
+            if (currentSource === 'sheet') {
+                const posFilter = document.getElementById('position-filter').value;
+                items = currentType === 'candidate' ? data.candidates : data.companies;
+                
+                if (currentType === 'candidate' && posFilter !== 'all') {
+                    items = items.filter(c => c.Position === posFilter);
+                }
+                
+                items = items.map(i => ({
+                    name: currentType === 'candidate' ? `${i.Name} ${i['Last Name']}` : (i['Company Name'] || i['Company\t Name']),
+                    email: currentType === 'candidate' ? i.Email : i['Apply Email'],
+                    subtext: currentType === 'candidate' ? i.Position : 'Company'
+                }));
+            } else {
+                const manualText = document.getElementById('manual-recipients').value;
+                const lines = manualText.split('\n').filter(l => l.trim() !== '');
+                items = lines.map(line => {
+                    const [email, name] = line.split('|');
+                    return {
+                        name: name ? name.trim() : email.trim(),
+                        email: email.trim(),
+                        subtext: 'Manual Entry'
+                    };
+                }).filter(i => i.email.includes('@'));
+            }
 
+            list.innerHTML = items.length ? items.map((i, index) => {
+                return `
+                    <label class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 cursor-pointer transition-all border border-transparent hover:border-slate-100 group">
+                        <input type="checkbox" name="recipients" value="${i.email}" data-name="${i.name}" onchange="updateSelectionSummary()" class="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500">
+                        <div class="flex-1 overflow-hidden">
+                            <div class="text-sm font-bold text-slate-700 truncate group-hover:text-indigo-600">${i.name}</div>
+                            <div class="text-[10px] font-medium text-slate-400 truncate">${i.email} • ${i.subtext}</div>
+                        </div>
+                    </label>
+                `;
+            }).join('') : '<p class="text-xs text-slate-400 p-4 text-center font-medium">No recipients found.</p>';
+            
+            updateSelectionSummary();
+        }
+
+        function toggleAll(checked) {
+            const checkboxes = document.querySelectorAll('input[name="recipients"]');
+            checkboxes.forEach(cb => cb.checked = checked);
+            updateSelectionSummary();
+        }
+
+        function updateSelectionSummary() {
+            const selected = document.querySelectorAll('input[name="recipients"]:checked');
+            document.getElementById('selection-summary').textContent = `${selected.length} selected`;
             updateContent();
         }
 
@@ -376,42 +484,66 @@
         }
 
         function updateContent() {
-            const select = document.getElementById('recipient-select');
-            const option = select.options[select.selectedIndex];
-            const name = option ? option.getAttribute('data-name') : '[Name]';
-
+            const selected = document.querySelectorAll('input[name="recipients"]:checked');
+            let namePreview = '[Recipient Name]';
+            
+            if (selected.length === 1) {
+                namePreview = selected[0].getAttribute('data-name');
+            } else if (selected.length > 1) {
+                namePreview = `${selected[0].getAttribute('data-name')} and ${selected.length - 1} others`;
+            }
+            
             const template = templates[currentType][selectedTemplateIndex];
             document.getElementById('email-subject').value = template.subject;
-            document.getElementById('email-body').value = template.body(name);
+            document.getElementById('email-body').value = template.body(namePreview);
         }
 
         async function sendAutomatedEmail() {
-            const email = document.getElementById('recipient-select').value;
-            if (!email) {
-                showToast('Please select a recipient first!');
+            const selected = document.querySelectorAll('input[name="recipients"]:checked');
+            if (selected.length === 0) {
+                showToast('Please select at least one recipient!');
                 return;
             }
 
             const subject = document.getElementById('email-subject').value;
-            const body = document.getElementById('email-body').value;
+            const bodyTemplate = templates[currentType][selectedTemplateIndex].body;
             const btn = document.getElementById('btn-send-auto');
+
+            if (!confirm(`Are you sure you want to send emails to ${selected.length} recipients?`)) return;
 
             try {
                 btn.disabled = true;
-                btn.innerHTML = 'Sending...';
+                let sentCount = 0;
+                
+                for (let checkbox of selected) {
+                    const email = checkbox.value;
+                    const name = checkbox.getAttribute('data-name');
+                    const personalizedBody = bodyTemplate(name);
+                    
+                    btn.innerHTML = `Sending ${sentCount + 1}/${selected.length}...`;
+                    
+                    // Detect if we are on Laragon (.test or localhost) or Vercel
+                    const isLocal = window.location.hostname.includes('.test') || window.location.hostname === 'localhost';
+                    const apiUrl = isLocal ? '/api/send_email.php' : '/api/send_email';
 
-                const response = await fetch('/api/send_email', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ to: email, subject, body })
-                });
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ to: email, subject, body: personalizedBody })
+                    });
 
-                const result = await response.json();
-                if (result.success) {
-                    showToast('🚀 Email sent successfully!');
-                } else {
-                    showToast('❌ Error: ' + result.message);
+                    const result = await response.json();
+                    if (result.success) {
+                        sentCount++;
+                        checkbox.checked = false; // Uncheck successfully sent
+                        checkbox.parentElement.style.opacity = '0.5';
+                    } else {
+                        console.error(`Failed to send to ${email}:`, result.message);
+                    }
                 }
+                
+                showToast(`🚀 ${sentCount} emails sent successfully!`);
+                updateSelectionSummary();
             } catch (e) {
                 showToast('❌ Connection error to server.');
             } finally {
@@ -421,15 +553,22 @@
         }
 
         function sendViaZoho() {
-            const email = document.getElementById('recipient-select').value;
-            if (!email) {
+            const selected = document.querySelectorAll('input[name="recipients"]:checked');
+            if (selected.length === 0) {
                 showToast('Please select a recipient first!');
                 return;
             }
-            const subject = encodeURIComponent(document.getElementById('email-subject').value);
-            const body = encodeURIComponent(document.getElementById('email-body').value);
+            
+            if (selected.length > 1) {
+                showToast('Zoho drafting only works for one recipient at a time.');
+                return;
+            }
 
-            // Standard Zoho Mail compose URL
+            const email = selected[0].value;
+            const name = selected[0].getAttribute('data-name');
+            const subject = encodeURIComponent(document.getElementById('email-subject').value);
+            const body = encodeURIComponent(templates[currentType][selectedTemplateIndex].body(name));
+            
             const url = `https://mail.zoho.com/zm/#mail/compose/to=${email}&subject=${subject}&content=${body}`;
             window.open(url, '_blank');
         }
