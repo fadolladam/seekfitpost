@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SeekFit | Mail Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --primary: #4f46e5;
+            --bg-main: #f8fafc;
+            --bg-card: rgba(255, 255, 255, 0.8);
+            --border: rgba(0, 0, 0, 0.05);
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
+            color: #0f172a;
+        }
+
+        .glass {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 animate-fade-in">
+            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-4">
+                    <div
+                        class="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                            class="text-white">
+                            <rect width="20" height="16" x="2" y="4" rx="2" />
+                            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold tracking-tight text-slate-900">Mail Center</h1>
+                        <p class="text-slate-500 text-sm font-medium">Professional Outreach Tool</p>
+                    </div>
+                </div>
+
+                <nav class="hidden md:flex items-center bg-white/50 border border-slate-200/50 p-1 rounded-2xl">
+                    <a href="index.html"
+                        class="px-4 py-2 rounded-xl text-slate-600 hover:bg-white text-sm font-bold transition-all">Contacts</a>
+                    <a href="company.html"
+                        class="px-4 py-2 rounded-xl text-slate-600 hover:bg-white text-sm font-bold transition-all">Companies</a>
+                    <a href="mail.html"
+                        class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold shadow-sm transition-all">Mail
+                        Center</a>
+                </nav>
+            </div>
+
+            <div class="glass px-4 py-2 rounded-2xl flex items-center gap-3">
+                <div
+                    class="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+                        class="text-emerald-600">
+                        <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                </div>
+                <div class="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                    Auth: <span class="text-slate-900">hr@seekfitjob.com</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Configuration Sidebar -->
+            <div class="lg:col-span-1 space-y-6">
+                <div class="glass p-6 rounded-[2rem] space-y-6 animate-fade-in">
+                    <div>
+                        <label
+                            class="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-3">Audience
+                            Type</label>
+                        <div class="flex bg-slate-100 p-1 rounded-xl">
+                            <button onclick="setType('candidate')" id="btn-candidate"
+                                class="flex-1 py-2 rounded-lg text-sm font-bold transition-all bg-white shadow-sm text-indigo-600">Candidate</button>
+                            <button onclick="setType('company')" id="btn-company"
+                                class="flex-1 py-2 rounded-lg text-sm font-bold transition-all text-slate-500 hover:text-slate-700">Company</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-3">Select
+                            Recipient</label>
+                        <select id="recipient-select" onchange="updateContent()"
+                            class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all">
+                            <option value="">Loading data...</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-3">Choose
+                            Template</label>
+                        <div id="template-list" class="space-y-2">
+                            <!-- Templates will be injected here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass p-6 rounded-[2rem] bg-indigo-600 text-white space-y-4">
+                    <h3 class="font-bold text-lg leading-tight">Zoho Quick Access</h3>
+                    <p class="text-indigo-100 text-xs font-medium opacity-80 leading-relaxed">Your credentials are
+                        ready. Copy them before jumping to Zoho Mail.</p>
+                    <div class="space-y-2">
+                        <button onclick="copyToClipboard('hr@seekfitjob.com', 'Login copied!')"
+                            class="w-full py-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all">
+                            Copy Login
+                        </button>
+                        <button onclick="copyToClipboard('kdhfnduhgrbu4uudh3', 'Password copied!')"
+                            class="w-full py-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all">
+                            Copy Password
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Editor Area -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="glass p-8 rounded-[2.5rem] space-y-6 animate-fade-in" style="animation-delay: 0.1s">
+                    <div>
+                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-3">Email
+                            Subject</label>
+                        <input type="text" id="email-subject"
+                            class="w-full bg-slate-50 border border-slate-100 rounded-xl px-5 py-3 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all">
+                    </div>
+
+                    <div>
+                        <label
+                            class="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-3">Message
+                            Body</label>
+                        <textarea id="email-body"
+                            class="w-full h-96 bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all custom-scrollbar leading-relaxed"></textarea>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row gap-4 pt-4">
+                        <button onclick="sendAutomatedEmail()" id="btn-send-auto"
+                            class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 font-bold text-sm flex items-center justify-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M22 2 11 13" />
+                                <path d="m22 2-7 20-4-9-9-4Z" />
+                            </svg>
+                            Send Automated Email
+                        </button>
+                        <button onclick="sendViaZoho()"
+                            class="flex-1 bg-white border border-slate-200 text-slate-600 py-4 rounded-2xl hover:bg-slate-50 transition-all font-bold text-sm flex items-center justify-center gap-2">
+                            Draft in Zoho
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Signature Preview Section -->
+                <div class="glass p-8 rounded-[2.5rem] space-y-6 animate-fade-in" style="animation-delay: 0.2s">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-widest">Professional HTML
+                            Signature</h3>
+                        <button onclick="copySignatureHTML()"
+                            class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 uppercase tracking-wider">Copy
+                            HTML Code</button>
+                    </div>
+
+                    <div id="signature-preview" class="p-6 bg-white border border-slate-100 rounded-2xl">
+                        <table cellpadding="0" cellspacing="0"
+                            style="font-family: 'Outfit', sans-serif; color: #0f172a;">
+                            <tr>
+                                <td style="padding-right: 24px; border-right: 2px solid #f1f5f9;">
+                                    <div
+                                        style="width: 100px; height: 100px; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-center; background: #f8fafc; border: 1px dashed #cbd5e1;">
+                                        <img src="https://i.ibb.co/TMhCH7ML/seekfitjob-logo.png" alt="Logo"
+                                            style="width: 100px; height: 100px; object-fit: contain;">
+                                    </div>
+                                </td>
+                                <td style="padding-left: 24px;">
+                                    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 2px;">
+                                        SeekFitJob HR Department</div>
+                                    <div
+                                        style="font-size: 14px; color: #64748b; font-weight: 500; margin-bottom: 12px;">
+                                        Human Resources</div>
+
+                                    <div style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 2px;">
+                                        SeekFitJob</div>
+                                    <div
+                                        style="font-size: 13px; color: #475569; font-weight: 500; margin-bottom: 12px;">
+                                        Seek your fit, move a great forward.</div>
+
+                                    <div style="font-size: 13px; font-weight: 600; color: #4f46e5; margin-bottom: 4px;">
+                                        seekfitjob.com</div>
+                                    <div style="font-size: 13px; font-weight: 600; color: #4f46e5; margin-bottom: 4px;">
+                                        hr@seekfitjob.com</div>
+                                    <div style="font-size: 13px; font-weight: 600; color: #4f46e5;">Tel : 085 558 404
+                                    </div>
+
+                                    <div style="margin-top: 16px; display: flex; gap: 8px;">
+                                        <a href="t.me/SeekFitJobKH"><img
+                                                src="https://cdn-icons-png.flaticon.com/32/2111/2111646.png" width="24"
+                                                height="24" alt="Telegram"></a>
+                                        <a href="https://www.facebook.com/SeekfitJob"><img
+                                                src="https://cdn-icons-png.flaticon.com/32/733/733547.png" width="24"
+                                                height="24" alt="Facebook" style="margin-left: 8px;"></a>
+                                        <!-- <a href="#"><img src="https://cdn-icons-png.flaticon.com/32/2111/2111463.png" width="24" height="24" alt="Instagram" style="margin-left: 8px;"></a> -->
+                                        <a href="https://www.linkedin.com/company/seekfitjob/"><img
+                                                src="https://cdn-icons-png.flaticon.com/32/3536/3536505.png" width="24"
+                                                height="24" alt="LinkedIn" style="margin-left: 8px;"></a>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <p class="text-[11px] text-slate-400 font-medium italic">Tip: Copy the HTML code and paste it into
+                        Zoho Mail > Settings > Signatures > HTML Mode.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Notification -->
+    <div id="toast"
+        class="fixed bottom-8 left-1/2 -translate-x-1/2 glass px-6 py-3 rounded-2xl text-sm font-bold text-slate-900 shadow-2xl hidden animate-fade-in">
+    </div>
+
+    <script>
+        let currentType = 'candidate';
+        let data = { candidates: [], companies: [] };
+        let selectedTemplateIndex = 0;
+
+        const templates = {
+            candidate: [
+                {
+                    name: 'Interview Invitation',
+                    subject: 'Interview Invitation - SeekFit Professional Opportunity',
+                    body: (name) => `Dear ${name},\n\nThank you for applying for a position through SeekFit. We were very impressed with your background and would like to invite you for an interview.\n\nPlease let us know your availability for the coming week.\n\n${getSignature()}`
+                },
+                {
+                    name: 'Job Offer',
+                    subject: 'Job Offer Letter - SeekFit',
+                    body: (name) => `Dear ${name},\n\nWe are delighted to offer you the position. We believe your skills and experience will be a great asset to our team.\n\nAttached is the formal offer letter. We look forward to your positive response.\n\n${getSignature()}`
+                },
+                {
+                    name: 'Follow Up',
+                    subject: 'Follow Up regarding your application',
+                    body: (name) => `Hello ${name},\n\nWe wanted to follow up on our previous communication. Are you still interested in the professional opportunities we discussed?\n\n${getSignature()}`
+                }
+            ],
+            company: [
+                {
+                    name: 'Partnership Inquiry',
+                    subject: 'Potential Business Partnership - SeekFit Professional',
+                    body: (name) => `Hello ${name} Team,\n\nWe have been following your growth and believe there is a significant synergy between our platforms. We would love to discuss a potential partnership to enhance recruitment efficiency.\n\n${getSignature()}`
+                },
+                {
+                    name: 'Service Introduction',
+                    subject: 'Enhancing your Recruitment Pipeline with SeekFit',
+                    body: (name) => `Hello ${name},\n\nAt SeekFit, we specialize in connecting high-quality candidates with top-tier companies like yours. We would love to show you how our latest directory tools can benefit your HR department.\n\n${getSignature()}`
+                }
+            ]
+        };
+
+        function getSignature() {
+            return `Best regards,\n\nSeekFitJob HR Department\nHuman Resources\n\nSeekFitJob\nSeek your fit, move a great forward.\nseekfitjob.com | hr@seekfitjob.com\nTel: 085 558 404`;
+        }
+
+        async function loadSheetData() {
+            try {
+                // Fetch Candidates
+                const res1 = await fetch('https://docs.google.com/spreadsheets/d/12l5s9TEQasVcggDjIlL7jLtL9HVdDwLEBufXDv5DGaw/export?format=csv&gid=62699452');
+                const csv1 = await res1.text();
+                Papa.parse(csv1, { header: true, complete: (r) => data.candidates = r.data });
+
+                // Fetch Companies
+                const res2 = await fetch('https://docs.google.com/spreadsheets/d/12l5s9TEQasVcggDjIlL7jLtL9HVdDwLEBufXDv5DGaw/export?format=csv&gid=416084880');
+                const csv2 = await res2.text();
+                Papa.parse(csv2, {
+                    header: true, complete: (r) => {
+                        data.companies = r.data;
+                        updateRecipientList();
+                    }
+                });
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function setType(type) {
+            currentType = type;
+            selectedTemplateIndex = 0;
+
+            const bc = document.getElementById('btn-candidate');
+            const bco = document.getElementById('btn-company');
+
+            if (type === 'candidate') {
+                bc.className = 'flex-1 py-2 rounded-lg text-sm font-bold transition-all bg-white shadow-sm text-indigo-600';
+                bco.className = 'flex-1 py-2 rounded-lg text-sm font-bold transition-all text-slate-500 hover:text-slate-700';
+            } else {
+                bco.className = 'flex-1 py-2 rounded-lg text-sm font-bold transition-all bg-white shadow-sm text-indigo-600';
+                bc.className = 'flex-1 py-2 rounded-lg text-sm font-bold transition-all text-slate-500 hover:text-slate-700';
+            }
+
+            updateRecipientList();
+            renderTemplates();
+        }
+
+        function updateRecipientList() {
+            const select = document.getElementById('recipient-select');
+            const items = currentType === 'candidate' ? data.candidates : data.companies;
+
+            select.innerHTML = '<option value="">Select a recipient...</option>' + items.map(i => {
+                const name = currentType === 'candidate' ? `${i.Name} ${i['Last Name']}` : (i['Company Name'] || i['Company\t Name']);
+                const email = currentType === 'candidate' ? i.Email : i['Apply Email'];
+                if (!email) return '';
+                return `<option value="${email}" data-name="${name}">${name}</option>`;
+            }).join('');
+
+            updateContent();
+        }
+
+        function renderTemplates() {
+            const list = document.getElementById('template-list');
+            list.innerHTML = templates[currentType].map((t, i) => `
+                <button onclick="setTemplate(${i})" class="w-full text-left px-4 py-3 rounded-xl border transition-all text-xs font-bold ${selectedTemplateIndex === i ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-100 text-slate-500 hover:border-indigo-100'}">
+                    ${t.name}
+                </button>
+            `).join('');
+            updateContent();
+        }
+
+        function setTemplate(index) {
+            selectedTemplateIndex = index;
+            renderTemplates();
+        }
+
+        function updateContent() {
+            const select = document.getElementById('recipient-select');
+            const option = select.options[select.selectedIndex];
+            const name = option ? option.getAttribute('data-name') : '[Name]';
+
+            const template = templates[currentType][selectedTemplateIndex];
+            document.getElementById('email-subject').value = template.subject;
+            document.getElementById('email-body').value = template.body(name);
+        }
+
+        async function sendAutomatedEmail() {
+            const email = document.getElementById('recipient-select').value;
+            if (!email) {
+                showToast('Please select a recipient first!');
+                return;
+            }
+
+            const subject = document.getElementById('email-subject').value;
+            const body = document.getElementById('email-body').value;
+            const btn = document.getElementById('btn-send-auto');
+
+            try {
+                btn.disabled = true;
+                btn.innerHTML = 'Sending...';
+
+                const response = await fetch('/api/send_email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ to: email, subject, body })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showToast('🚀 Email sent successfully!');
+                } else {
+                    showToast('❌ Error: ' + result.message);
+                }
+            } catch (e) {
+                showToast('❌ Connection error to server.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg> Send Automated Email';
+            }
+        }
+
+        function sendViaZoho() {
+            const email = document.getElementById('recipient-select').value;
+            if (!email) {
+                showToast('Please select a recipient first!');
+                return;
+            }
+            const subject = encodeURIComponent(document.getElementById('email-subject').value);
+            const body = encodeURIComponent(document.getElementById('email-body').value);
+
+            // Standard Zoho Mail compose URL
+            const url = `https://mail.zoho.com/zm/#mail/compose/to=${email}&subject=${subject}&content=${body}`;
+            window.open(url, '_blank');
+        }
+
+        function copyEmail() {
+            const body = document.getElementById('email-body').value;
+            copyToClipboard(body, 'Email content copied!');
+        }
+
+        function copySignatureHTML() {
+            const html = document.getElementById('signature-preview').innerHTML;
+            copyToClipboard(html, 'Signature HTML copied! Paste this into Zoho settings.');
+        }
+
+        function copyToClipboard(text, message) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(message);
+            });
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSheetData();
+            renderTemplates();
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SeekFit | Company Information</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --accent: #059669;
+            --bg-main: #f8fafc;
+            --bg-card: rgba(255, 255, 255, 0.8);
+            --border: rgba(0, 0, 0, 0.05);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+        }
+
+        body { 
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
+            color: var(--text-main);
+        }
+
+        .glass {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+        }
+
+        .glass-hover:hover {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: rgba(79, 70, 229, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.05); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.1); }
+
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .loading-shimmer {
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(0, 0, 0, 0.02) 50%, rgba(255, 255, 255, 0) 100%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            from { background-position: 200% 0; }
+            to { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 selection:bg-indigo-100 selection:text-indigo-900">
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Header Section -->
+        <header class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 animate-fade-in">
+            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="16" x2="22" y1="11" y2="11"/></svg>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
+                            Company Directory
+                            <span class="text-xs bg-indigo-50 text-indigo-600 border border-indigo-100 px-2.5 py-0.5 rounded-full font-bold">v2.0</span>
+                        </h1>
+                        <p class="text-slate-500 text-sm mt-0.5 font-medium" id="company-count-summary">Syncing with Google Sheets...</p>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                <nav class="hidden md:flex items-center bg-white/50 border border-slate-200/50 p-1 rounded-2xl">
+                    <a href="index.html" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-white text-sm font-bold transition-all">Contacts</a>
+                    <a href="company.html" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold shadow-sm transition-all">Companies</a>
+                    <a href="mail.html" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-white text-sm font-bold transition-all">Mail Center</a>
+                </nav>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button onclick="fetchCompanyData()" class="group flex items-center gap-2 glass px-4 py-2.5 rounded-xl hover:bg-white transition-all text-sm font-bold text-slate-600">
+                    <svg id="refresh-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover:rotate-180 transition-transform duration-500 text-indigo-500"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+                    Sync Sheet
+                </button>
+            </div>
+        </header>
+
+        <main class="space-y-6">
+            <!-- Search Row -->
+            <div class="glass p-4 rounded-2xl flex flex-col md:flex-row gap-4 items-center">
+                <div class="relative flex-grow w-full group">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    <input 
+                        type="text" 
+                        id="search-input"
+                        placeholder="Search by company name, email..." 
+                        class="w-full pl-12 pr-10 py-3 bg-white border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 transition-all text-slate-800 placeholder:text-slate-400 font-medium"
+                        oninput="onSearchInput()"
+                    >
+                    <button id="clear-search" onclick="clearSearch()" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors hidden">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Companies Grid -->
+            <div id="companies-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Skeleton loading cards -->
+                <div class="glass p-6 rounded-3xl animate-pulse space-y-4">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-slate-100 rounded-2xl"></div>
+                        <div class="h-6 w-32 bg-slate-100 rounded"></div>
+                    </div>
+                    <div class="h-4 w-full bg-slate-100 rounded"></div>
+                    <div class="h-4 w-2/3 bg-slate-100 rounded"></div>
+                </div>
+            </div>
+            
+            <div class="bg-slate-50/30 p-4 border-t border-slate-100 flex justify-between items-center px-6 rounded-3xl glass">
+                <p id="showing-count" class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Syncing database...</p>
+                <div class="flex gap-1.5 items-center">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Cloud Connected</span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // State Management
+        let companies = [];
+        // Note: gid should be updated to the actual gid of the 'company' sheet tab
+        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/12l5s9TEQasVcggDjIlL7jLtL9HVdDwLEBufXDv5DGaw/export?format=csv&gid=416084880';
+
+        // UI Selectors
+        const companiesGrid = document.getElementById('companies-grid');
+        const searchInput = document.getElementById('search-input');
+        const clearSearchBtn = document.getElementById('clear-search');
+        const summaryText = document.getElementById('company-count-summary');
+        const showingCountText = document.getElementById('showing-count');
+        const refreshIcon = document.getElementById('refresh-icon');
+
+        // Data Fetching
+        async function fetchCompanyData() {
+            try {
+                refreshIcon.classList.add('animate-spin');
+                summaryText.textContent = 'Fetching company data...';
+                
+                // Using proxy or direct fetch if CORS allows. For Google Sheets, usually public CSV works.
+                // If gid is unknown, we might need the user to provide it.
+                // Since I don't have the gid, I'll provide a way for the user to set it or use a default.
+                const response = await fetch(SHEET_URL.replace('YOUR_COMPANY_GID', '0')); // Defaulting to 0 for now
+                const csvData = await response.text();
+                
+                Papa.parse(csvData, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        // Headers: Company Name, Career Web, Apply Email, Contact
+                        companies = results.data.map((row, index) => ({
+                            id: index,
+                            name: row['Company Name'] || row['Company\t Name'] || 'Unknown Company',
+                            careerWeb: row['Career Web'] || '',
+                            applyEmail: row['Apply Email'] || '',
+                            contact: row['Contact'] || ''
+                        }));
+                        
+                        renderCompanies();
+                        refreshIcon.classList.remove('animate-spin');
+                    }
+                });
+            } catch (error) {
+                console.error('Error fetching company data:', error);
+                summaryText.textContent = 'Failed to sync companies.';
+                refreshIcon.classList.remove('animate-spin');
+            }
+        }
+
+        function onSearchInput() {
+            if (searchInput.value) {
+                clearSearchBtn.classList.remove('hidden');
+            } else {
+                clearSearchBtn.classList.add('hidden');
+            }
+            renderCompanies();
+        }
+
+        function clearSearch() {
+            searchInput.value = '';
+            clearSearchBtn.classList.add('hidden');
+            renderCompanies();
+        }
+
+        function renderCompanies() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const filtered = companies.filter(c => 
+                c.name.toLowerCase().includes(searchTerm) || 
+                c.applyEmail.toLowerCase().includes(searchTerm)
+            );
+
+            summaryText.textContent = `${companies.length} companies synced from cloud`;
+            showingCountText.textContent = `Showing ${filtered.length} results`;
+
+            if (filtered.length === 0) {
+                companiesGrid.innerHTML = `
+                    <div class="col-span-full p-20 text-center">
+                        <div class="flex flex-col items-center animate-fade-in">
+                            <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-6 text-slate-300">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                            </div>
+                            <h3 class="text-xl font-bold text-slate-900 mb-2">No companies found</h3>
+                            <p class="text-slate-500 max-w-xs text-sm font-medium">Try a different search term.</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            companiesGrid.innerHTML = filtered.map((c, i) => `
+                <div class="glass p-6 rounded-[2rem] space-y-5 glass-hover transition-all animate-fade-in" style="animation-delay: ${i * 0.05}s">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-lg text-indigo-600 uppercase shadow-sm">
+                            ${c.name[0]}
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-lg leading-tight">${c.name}</h3>
+                            <div class="flex items-center gap-1.5 mt-1">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Partner</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3 pt-2">
+                        <div class="flex items-center gap-3 text-slate-600">
+                            <div class="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-indigo-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                            </div>
+                            <div class="text-sm font-semibold truncate">${c.applyEmail || 'No email provided'}</div>
+                        </div>
+                        
+                        <div class="flex items-center gap-3 text-slate-600">
+                            <div class="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-indigo-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            </div>
+                            <div class="text-sm font-semibold">${c.contact || 'No contact provided'}</div>
+                        </div>
+                    </div>
+
+                    <div class="pt-2">
+                        <a href="${c.careerWeb.startsWith('http') ? c.careerWeb : 'https://' + c.careerWeb}" target="_blank" class="w-full py-3 bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 group/btn">
+                            Visit Career Portal
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover/btn:translate-x-1 transition-transform"><path d="M7 17l10-10"/><path d="M7 7h10v10"/></svg>
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', fetchCompanyData);
+    </script>
+</body>
+</html>

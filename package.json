@@ -1,0 +1,9 @@
+{
+  "name": "seekfit-outreach",
+  "version": "1.0.0",
+  "description": "SeekFit Professional Outreach Tool",
+  "main": "api/send_email.js",
+  "dependencies": {
+    "nodemailer": "^6.9.1"
+  }
+}
