@@ -302,36 +302,32 @@
                 {
                     name: 'Interview Invitation',
                     subject: 'Interview Invitation - SeekFit Professional Opportunity',
-                    body: (name) => `Dear ${name},\n\nThank you for applying for a position through SeekFit. We were very impressed with your background and would like to invite you for an interview.\n\nPlease let us know your availability for the coming week.\n\n${getSignature()}`
+                    body: (name) => `Dear ${name},\n\nThank you for applying for a position through SeekFit. We were very impressed with your background and would like to invite you for an interview.\n\nPlease let us know your availability for the coming week.\n\nBest regards,`
                 },
                 {
                     name: 'Job Offer',
                     subject: 'Job Offer Letter - SeekFit',
-                    body: (name) => `Dear ${name},\n\nWe are delighted to offer you the position. We believe your skills and experience will be a great asset to our team.\n\nAttached is the formal offer letter. We look forward to your positive response.\n\n${getSignature()}`
+                    body: (name) => `Dear ${name},\n\nWe are delighted to offer you the position. We believe your skills and experience will be a great asset to our team.\n\nAttached is the formal offer letter. We look forward to your positive response.\n\nBest regards,`
                 },
                 {
                     name: 'Follow Up',
                     subject: 'Follow Up regarding your application',
-                    body: (name) => `Hello ${name},\n\nWe wanted to follow up on our previous communication. Are you still interested in the professional opportunities we discussed?\n\n${getSignature()}`
+                    body: (name) => `Hello ${name},\n\nWe wanted to follow up on our previous communication. Are you still interested in the professional opportunities we discussed?\n\nBest regards,`
                 }
             ],
             company: [
                 {
                     name: 'Partnership Inquiry',
                     subject: 'Potential Business Partnership - SeekFit Professional',
-                    body: (name) => `Hello ${name} Team,\n\nWe have been following your growth and believe there is a significant synergy between our platforms. We would love to discuss a potential partnership to enhance recruitment efficiency.\n\n${getSignature()}`
+                    body: (name) => `Hello ${name} Team,\n\nWe have been following your growth and believe there is a significant synergy between our platforms. We would love to discuss a potential partnership to enhance recruitment efficiency.\n\nBest regards,`
                 },
                 {
                     name: 'Service Introduction',
                     subject: 'Enhancing your Recruitment Pipeline with SeekFit',
-                    body: (name) => `Hello ${name},\n\nAt SeekFit, we specialize in connecting high-quality candidates with top-tier companies like yours. We would love to show you how our latest directory tools can benefit your HR department.\n\n${getSignature()}`
+                    body: (name) => `Hello ${name},\n\nAt SeekFit, we specialize in connecting high-quality candidates with top-tier companies like yours. We would love to show you how our latest directory tools can benefit your HR department.\n\nBest regards,`
                 }
             ]
         };
-
-        function getSignature() {
-            return `Best regards,\n\nSeekFitJob HR Department\nHuman Resources\n\nSeekFitJob\nSeek your fit, move a great forward.\nseekfitjob.com | hr@seekfitjob.com\nTel: 085 558 404`;
-        }
 
         async function loadSheetData() {
             try {
