@@ -522,11 +522,7 @@
                     
                     btn.innerHTML = `Sending ${sentCount + 1}/${selected.length}...`;
                     
-                    // Detect if we are on Laragon (.test or localhost) or Vercel
-                    const isLocal = window.location.hostname.includes('.test') || window.location.hostname === 'localhost';
-                    const apiUrl = isLocal ? '/api/send_email.php' : '/api/send_email';
-
-                    const response = await fetch(apiUrl, {
+                    const response = await fetch('/api/send_email', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ to: email, subject, body: personalizedBody })
