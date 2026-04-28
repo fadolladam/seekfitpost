@@ -10,10 +10,10 @@ module.exports = async (req, res) => {
     return res.status(405).json({ success: false, message: 'Method not allowed' });
   }
 
-  const { to, subject, body } = req.body;
+  const { to, subject, body, smtpPass } = req.body;
 
-  if (!to || !subject || !body) {
-    return res.status(400).json({ success: false, message: 'Missing required fields' });
+  if (!to || !subject || !body || !smtpPass) {
+    return res.status(400).json({ success: false, message: 'Missing required fields (to, subject, body, or smtpPass)' });
   }
 
   // --- CONFIGURATION ---
@@ -26,7 +26,7 @@ module.exports = async (req, res) => {
     secure: true,
     auth: {
       user: 'hr@seekfitjob.com',
-      pass: 'hZE4FodxE!m!i!kCF9Me',
+      pass: smtpPass,
     },
   });
 
