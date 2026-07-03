@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "SeekFitJob AI Post Generator & Multi-Platform Publisher",
   "scripts": {
+    "build": "tailwindcss -i ./src/input.css -o ./public/tailwind.css --minify",
     "build:css": "tailwindcss -i ./src/input.css -o ./public/tailwind.css --minify",
     "watch:css": "tailwindcss -i ./src/input.css -o ./public/tailwind.css --watch",
     "dev": "node server.js",
