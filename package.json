@@ -1,9 +1,19 @@
 {
-  "name": "seekfit-outreach",
+  "name": "seekfit-ai-post-generator",
   "version": "1.0.0",
-  "description": "SeekFit Professional Outreach Tool",
-  "main": "api/send_email.js",
+  "description": "SeekFitJob AI Post Generator & Multi-Platform Publisher",
+  "scripts": {
+    "build:css": "tailwindcss -i ./src/input.css -o ./public/tailwind.css --minify",
+    "watch:css": "tailwindcss -i ./src/input.css -o ./public/tailwind.css --watch",
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
   "dependencies": {
-    "nodemailer": "^6.9.1"
+    "dotenv": "^17.4.2",
+    "node-html-parser": "^6.1.13",
+    "openai": "^4.67.0"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
   }
 }

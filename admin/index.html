@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SeekFit | Contact Directory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --accent: #059669;
+            --bg-main: #f8fafc;
+            --bg-card: rgba(255, 255, 255, 0.8);
+            --border: rgba(0, 0, 0, 0.05);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+        }
+
+        body { 
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
+            color: var(--text-main);
+        }
+
+        .glass {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+        }
+
+        .glass-hover:hover {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: rgba(79, 70, 229, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.05); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.1); }
+
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .loading-shimmer {
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(0, 0, 0, 0.02) 50%, rgba(255, 255, 255, 0) 100%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            from { background-position: 200% 0; }
+            to { background-position: -200% 0; }
+        }
+
+        .status-badge {
+            background: rgba(5, 150, 105, 0.1);
+            color: #059669;
+            padding: 2px 8px;
+            border-radius: 99px;
+            font-size: 11px;
+            font-weight: 600;
+            border: 1px solid rgba(5, 150, 105, 0.2);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 selection:bg-indigo-100 selection:text-indigo-900">
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Header Section -->
+        <header class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 animate-fade-in">
+            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="16" x2="22" y1="11" y2="11"/></svg>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
+                            Contact Directory
+                            <span class="text-xs bg-indigo-50 text-indigo-600 border border-indigo-100 px-2.5 py-0.5 rounded-full font-bold">v2.0</span>
+                        </h1>
+                        <p class="text-slate-500 text-sm mt-0.5 font-medium" id="contact-count-summary">Syncing with Google Sheets...</p>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                <nav class="hidden md:flex items-center bg-white/50 border border-slate-200/50 p-1 rounded-2xl">
+                    <a href="index.html" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold shadow-sm transition-all">Contacts</a>
+                    <a href="company.html" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-white text-sm font-bold transition-all">Companies</a>
+                    <a href="camhr.html" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-white text-sm font-bold transition-all">CamHR</a>
+                    <a href="mail.html" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-white text-sm font-bold transition-all">Mail Center</a>
+                </nav>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button onclick="fetchSheetData()" class="group flex items-center gap-2 glass px-4 py-2.5 rounded-xl hover:bg-white transition-all text-sm font-bold text-slate-600">
+                    <svg id="refresh-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover:rotate-180 transition-transform duration-500 text-indigo-500"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+                    Sync Sheet
+                </button>
+                <div class="h-8 w-px bg-slate-200"></div>
+                <button onclick="toggleModal(true)" class="flex items-center gap-2 glass px-4 py-2.5 rounded-xl hover:bg-white transition-all text-sm font-bold text-slate-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                    Import
+                </button>
+                <button onclick="exportCSV()" class="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 text-sm font-bold">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    Export
+                </button>
+            </div>
+        </header>
+
+        <div class="flex flex-col lg:flex-row gap-8 items-start">
+            <!-- Sidebar: Position Filters -->
+            <aside class="w-full lg:w-80 lg:sticky lg:top-8 shrink-0 space-y-6">
+                <div class="glass p-6 rounded-3xl space-y-6">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Positions</h2>
+                        <button onclick="clearAllFilters()" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors uppercase tracking-wider">Reset All</button>
+                    </div>
+                    
+                    <div id="position-tags-container" class="flex flex-col gap-2.5 custom-scrollbar max-h-[65vh] overflow-y-auto pr-2">
+                        <!-- Shimmer loading tags -->
+                        <div class="h-10 w-full glass rounded-xl loading-shimmer"></div>
+                        <div class="h-10 w-full glass rounded-xl loading-shimmer opacity-80"></div>
+                        <div class="h-10 w-full glass rounded-xl loading-shimmer opacity-60"></div>
+                        <div class="h-10 w-full glass rounded-xl loading-shimmer opacity-40"></div>
+                    </div>
+                </div>
+                
+                <div class="glass p-6 rounded-3xl hidden lg:block">
+                    <div class="flex items-center gap-3 text-slate-500 text-xs font-medium">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                        Tip: Filter candidates by their applied roles to narrow down your search.
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main class="flex-grow w-full space-y-6">
+                <!-- Search Row -->
+                <div class="glass p-4 rounded-2xl flex flex-col md:flex-row gap-4 items-center">
+                    <div class="relative flex-grow w-full group">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                        <input 
+                            type="text" 
+                            id="search-input"
+                            placeholder="Search by name, email, or position..." 
+                            class="w-full pl-12 pr-10 py-3 bg-white border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 transition-all text-slate-800 placeholder:text-slate-400 font-medium"
+                            oninput="onSearchInput()"
+                        >
+                        <button id="clear-search" onclick="clearSearch()" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors hidden">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Table Container -->
+                <div class="glass rounded-3xl overflow-hidden shadow-xl shadow-indigo-100/20 border-white">
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50/50 border-b border-slate-100">
+                                    <th class="p-5 font-bold text-slate-400 text-[11px] uppercase tracking-widest">Candidate Info</th>
+                                    <th class="p-5 font-bold text-slate-400 text-[11px] uppercase tracking-widest">Contact Details</th>
+                                    <th class="p-5 font-bold text-slate-400 text-[11px] uppercase tracking-widest">Documents</th>
+                                    <th class="p-5 font-bold text-slate-400 text-[11px] uppercase tracking-widest text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="contacts-table-body">
+                                <!-- Skeleton loading rows -->
+                                <tr class="animate-pulse">
+                                    <td class="p-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-slate-100 rounded-xl"></div><div class="space-y-2"><div class="h-4 w-32 bg-slate-100 rounded"></div><div class="h-3 w-20 bg-slate-100/50 rounded"></div></div></div></td>
+                                    <td class="p-5"><div class="space-y-2"><div class="h-4 w-40 bg-slate-100 rounded"></div><div class="h-3 w-24 bg-slate-100/50 rounded"></div></div></td>
+                                    <td class="p-5"><div class="h-8 w-24 bg-slate-100 rounded-lg"></div></td>
+                                    <td class="p-5"><div class="h-8 w-8 bg-slate-100 rounded ml-auto"></div></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="bg-slate-50/30 p-4 border-t border-slate-100 flex justify-between items-center px-6">
+                        <p id="showing-count" class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Syncing database...</p>
+                        <div class="flex gap-1.5 items-center">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Cloud Connected</span>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="import-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 hidden items-center justify-center p-4 transition-all duration-300">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-300 overflow-hidden border border-slate-100" id="modal-container">
+            <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900 tracking-tight">Bulk Import</h2>
+                    <p class="text-slate-500 text-sm font-medium">Add multiple contacts at once</p>
+                </div>
+                <button onclick="toggleModal(false)" class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </div>
+            <div class="p-8">
+                <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl mb-6 flex gap-4 items-start">
+                    <div class="bg-indigo-100 p-2 rounded-lg text-indigo-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                    </div>
+                    <p class="text-sm text-indigo-900 leading-relaxed font-medium">
+                        Use <strong>Pipe (|)</strong> or <strong>Tab</strong> to separate fields. <br>
+                        <code class="bg-indigo-100/50 px-1.5 py-0.5 rounded text-indigo-700 font-bold text-[12px]">Name|Last Name|Email|Position|Phone|CV Links</code>
+                    </p>
+                </div>
+                <textarea 
+                    id="import-textarea"
+                    class="w-full h-64 p-5 bg-slate-50 border border-slate-100 rounded-3xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono text-[13px] text-slate-700 placeholder:text-slate-300 custom-scrollbar"
+                    placeholder="Chhuon|Sophat|email@gmail.com|Officer|086223706|https://link1.com"
+                ></textarea>
+            </div>
+            <div class="p-8 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-4">
+                <button onclick="toggleModal(false)" class="px-6 py-3 text-slate-400 hover:text-slate-600 font-bold text-sm transition-colors">Discard</button>
+                <button onclick="handleBulkImport()" class="px-8 py-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 font-bold text-sm">Start Processing</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State Management
+        let contacts = [];
+        let selectedPosition = 'All';
+        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/12l5s9TEQasVcggDjIlL7jLtL9HVdDwLEBufXDv5DGaw/export?format=csv&gid=62699452';
+
+        // UI Selectors
+        const tableBody = document.getElementById('contacts-table-body');
+        const searchInput = document.getElementById('search-input');
+        const clearSearchBtn = document.getElementById('clear-search');
+        const tagsContainer = document.getElementById('position-tags-container');
+        const modal = document.getElementById('import-modal');
+        const modalContainer = document.getElementById('modal-container');
+        const importTextarea = document.getElementById('import-textarea');
+        const summaryText = document.getElementById('contact-count-summary');
+        const showingCountText = document.getElementById('showing-count');
+        const refreshIcon = document.getElementById('refresh-icon');
+
+        // Data Fetching
+        async function fetchSheetData() {
+            try {
+                refreshIcon.classList.add('animate-spin');
+                summaryText.textContent = 'Fetching data from Google Sheets...';
+                
+                const response = await fetch(SHEET_URL);
+                const csvData = await response.text();
+                
+                Papa.parse(csvData, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        const mappedData = results.data.map((row, index) => ({
+                            id: Date.now() + index,
+                            timestamp: row['Timestamp'] || '',
+                            firstName: row['Name'] || '',
+                            lastName: row['Last Name'] || '',
+                            email: row['Email'] || '',
+                            position: row['Position'] || 'General',
+                            phone: row['Contact number'] || '',
+                            cvLink: row['Upload your CV'] || ''
+                        }));
+                        
+                        contacts = mappedData;
+                        renderUI();
+                        refreshIcon.classList.remove('animate-spin');
+                    }
+                });
+            } catch (error) {
+                console.error('Error fetching sheet data:', error);
+                summaryText.textContent = 'Failed to sync with Google Sheets.';
+                refreshIcon.classList.remove('animate-spin');
+            }
+        }
+
+        // Modal Management
+        function toggleModal(show) {
+            if (show) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                setTimeout(() => {
+                    modalContainer.classList.remove('scale-95', 'opacity-0');
+                    modalContainer.classList.add('scale-100', 'opacity-100');
+                }, 10);
+            } else {
+                modalContainer.classList.remove('scale-100', 'opacity-100');
+                modalContainer.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                    importTextarea.value = '';
+                }, 300);
+            }
+        }
+
+        function handleBulkImport() {
+            const text = importTextarea.value.trim();
+            if (!text) return;
+
+            const lines = text.split('\n');
+            const newContacts = lines.map((line, index) => {
+                const parts = line.split(/[|\t]/).map(p => p.trim());
+                if (parts.length < 2) return null;
+                return {
+                    id: Date.now() + index,
+                    firstName: parts[0] || '',
+                    lastName: parts[1] || '',
+                    email: parts[2] || '',
+                    position: parts[3] || 'General',
+                    phone: parts[4] || '',
+                    cvLink: parts[5] || '' 
+                };
+            }).filter(Boolean);
+
+            contacts = [...newContacts, ...contacts];
+            renderUI();
+            toggleModal(false);
+        }
+
+        // Filtering & Search
+        function deleteContact(id) {
+            contacts = contacts.filter(c => c.id !== id);
+            renderUI();
+        }
+
+        function clearSearch() {
+            searchInput.value = '';
+            clearSearchBtn.classList.add('hidden');
+            renderContacts();
+        }
+
+        function onSearchInput() {
+            if (searchInput.value) {
+                clearSearchBtn.classList.remove('hidden');
+            } else {
+                clearSearchBtn.classList.add('hidden');
+            }
+            renderContacts();
+        }
+
+        function clearAllFilters() {
+            searchInput.value = '';
+            clearSearchBtn.classList.add('hidden');
+            selectedPosition = 'All';
+            renderUI();
+        }
+
+        function selectPosition(pos) {
+            selectedPosition = pos;
+            renderUI();
+        }
+
+        // UI Rendering
+        function renderUI() {
+            renderTags();
+            renderContacts();
+        }
+
+        function renderTags() {
+            const positionCounts = contacts.reduce((acc, c) => {
+                const pos = c.position || 'Unknown';
+                acc[pos] = (acc[pos] || 0) + 1;
+                return acc;
+            }, {});
+
+            const sortedPositions = Object.keys(positionCounts).sort();
+            
+            let html = `
+                <button onclick="selectPosition('All')" class="group w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all border ${selectedPosition === 'All' ? 'bg-indigo-600 border-indigo-500 shadow-lg shadow-indigo-100 text-white' : 'glass border-slate-100 text-slate-500 hover:bg-white hover:border-indigo-100'}">
+                    <span class="text-sm font-bold tracking-tight">All Candidates</span>
+                    <span class="text-[10px] font-black px-2.5 py-1 rounded-lg ${selectedPosition === 'All' ? 'bg-indigo-500/50' : 'bg-slate-100 text-slate-400'}">${contacts.length}</span>
+                </button>
+            `;
+
+            sortedPositions.forEach(pos => {
+                const count = positionCounts[pos];
+                const isActive = selectedPosition === pos;
+                html += `
+                    <button onclick="selectPosition('${pos}')" class="group w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all border ${isActive ? 'bg-indigo-600 border-indigo-500 shadow-lg shadow-indigo-100 text-white' : 'glass border-slate-100 text-slate-500 hover:bg-white hover:border-indigo-100'}">
+                        <span class="text-sm font-bold tracking-tight truncate pr-4 text-left">${pos}</span>
+                        <span class="text-[10px] font-black px-2.5 py-1 rounded-lg ${isActive ? 'bg-indigo-500/50' : 'bg-slate-100 text-slate-400'}">${count}</span>
+                    </button>
+                `;
+            });
+
+            tagsContainer.innerHTML = html;
+        }
+
+        function renderContacts() {
+            const searchTerm = searchInput.value.toLowerCase();
+
+            const filtered = contacts.filter(c => {
+                const searchStr = `${c.firstName} ${c.lastName} ${c.email} ${c.position} ${c.phone}`.toLowerCase();
+                const matchesSearch = searchStr.includes(searchTerm);
+                const matchesPosition = selectedPosition === 'All' || c.position === selectedPosition;
+                return matchesSearch && matchesPosition;
+            });
+
+            summaryText.textContent = `${contacts.length} total entries synced from cloud`;
+            showingCountText.textContent = `Showing ${filtered.length} results found`;
+
+            if (filtered.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="p-20 text-center">
+                            <div class="flex flex-col items-center animate-fade-in">
+                                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-6 text-slate-300">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                                </div>
+                                <h3 class="text-xl font-bold text-slate-900 mb-2">No candidates found</h3>
+                                <p class="text-slate-500 max-w-xs text-sm font-medium">We couldn't find any results matching your current search or filter criteria.</p>
+                                <button onclick="clearAllFilters()" class="mt-8 px-6 py-2.5 bg-indigo-50 text-indigo-600 rounded-xl font-bold text-sm hover:bg-indigo-100 transition-all border border-indigo-100">Clear Search</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tableBody.innerHTML = filtered.map((c, i) => {
+                const cvLinks = c.cvLink ? c.cvLink.split(/[,|\n]/).map(l => l.trim()).filter(l => l.length > 0) : [];
+                const initials = (c.firstName[0] || '') + (c.lastName[0] || '');
+                
+                const cvButtonsHtml = cvLinks.length > 0 
+                    ? cvLinks.map((link, idx) => `
+                        <a href="${link}" target="_blank" class="group/cv inline-flex items-center gap-2 bg-indigo-50 hover:bg-indigo-600 border border-indigo-100 text-indigo-600 hover:text-white px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M9 15h6"/><path d="M9 11h6"/></svg>
+                            ${cvLinks.length > 1 ? `CV ${idx + 1}` : 'View CV'}
+                        </a>
+                      `).join('')
+                    : `<span class="text-slate-400 text-[11px] italic font-bold px-2 py-1 bg-slate-100 rounded-lg">No Document</span>`;
+
+                return `
+                <tr class="border-b border-slate-100 hover:bg-indigo-50/30 transition-colors group animate-fade-in" style="animation-delay: ${i * 0.05}s">
+                    <td class="p-5">
+                        <div class="flex items-center gap-4">
+                            <div class="w-11 h-11 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-xs text-indigo-600 uppercase shadow-sm">
+                                ${initials}
+                            </div>
+                            <div>
+                                <div class="font-bold text-slate-900 tracking-tight">${c.firstName} ${c.lastName}</div>
+                                <div class="text-[10px] font-black text-indigo-500 uppercase tracking-widest mt-0.5">${c.position || 'General'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-5">
+                        <div class="space-y-1.5">
+                            <div class="flex items-center gap-2 text-slate-700 text-sm font-semibold">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-400"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                                ${c.email}
+                            </div>
+                            <div class="flex items-center gap-2 text-slate-400 text-[11px] font-bold">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-slate-300"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                ${c.phone}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-5">
+                        <div class="flex flex-wrap gap-2">
+                            ${cvButtonsHtml}
+                        </div>
+                    </td>
+                    <td class="p-5 text-right">
+                        <button 
+                            onclick="deleteContact(${c.id})"
+                            class="w-9 h-9 glass rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-100 transition-all opacity-0 group-hover:opacity-100"
+                            title="Remove from view"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                        </button>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        function exportCSV() {
+            const headers = "First Name,Last Name,Email,Position,Phone,CV Link\n";
+            const csv = contacts.map(c => `"${c.firstName}","${c.lastName}","${c.email}","${c.position}","${c.phone}","${c.cvLink}"`).join('\n');
+            const blob = new Blob([headers + csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('hidden', '');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `SeekFit_Contacts_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // Initialize Application
+        document.addEventListener('DOMContentLoaded', fetchSheetData);
+    </script>
+</body>
+</html>

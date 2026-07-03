@@ -1,509 +1,603 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SeekFit | Contact Directory</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
-        
-        :root {
-            --primary: #4f46e5;
-            --primary-hover: #4338ca;
-            --accent: #059669;
-            --bg-main: #f8fafc;
-            --bg-card: rgba(255, 255, 255, 0.8);
-            --border: rgba(0, 0, 0, 0.05);
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SeekFit | AI Post Generator</title>
+  <link rel="stylesheet" href="/public/tailwind.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%234f46e5'/><text y='.9em' font-size='70' x='12'>✨</text></svg>" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
-        body { 
-            font-family: 'Outfit', sans-serif;
-            background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
-            color: var(--text-main);
-        }
+    body { font-family: 'Outfit', sans-serif; background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%); min-height: 100vh; }
 
-        .glass {
-            background: var(--bg-card);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--border);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
-        }
+    .glass {
+      background: rgba(255,255,255,0.8);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(0,0,0,0.05);
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.02);
+    }
 
-        .glass-hover:hover {
-            background: rgba(255, 255, 255, 0.95);
-            border-color: rgba(79, 70, 229, 0.2);
-            transform: translateY(-2px);
-        }
+    .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 10px; }
 
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.05); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.1); }
+    .fade-in { animation: fadeIn 0.35s ease-out forwards; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
 
-        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+    .spin { animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-        .loading-shimmer {
-            background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(0, 0, 0, 0.02) 50%, rgba(255, 255, 255, 0) 100%);
-            background-size: 200% 100%;
-            animation: shimmer 1.5s infinite;
-        }
+    .post-card { transition: all 0.18s; cursor: pointer; border: 2px solid transparent; }
+    .post-card:hover { background: rgba(255,255,255,0.95); transform: translateX(3px); }
+    .post-card.selected { border-color: #4f46e5; background: rgba(79,70,229,0.04); }
 
-        @keyframes shimmer {
-            from { background-position: 200% 0; }
-            to { background-position: -200% 0; }
-        }
+    .platform-btn { transition: all 0.18s; border-width: 2px; }
+    .platform-btn.active   { background:#4f46e5; border-color:#4f46e5; color:white; }
+    .platform-btn.inactive { background:white; border-color:#e2e8f0; color:#94a3b8; }
 
-        .status-badge {
-            background: rgba(5, 150, 105, 0.1);
-            color: #059669;
-            padding: 2px 8px;
-            border-radius: 99px;
-            font-size: 11px;
-            font-weight: 600;
-            border: 1px solid rgba(5, 150, 105, 0.2);
-        }
-    </style>
+    .img-thumb { transition: all 0.2s; cursor: pointer; }
+    .img-thumb:hover { transform: scale(1.03); }
+    .img-thumb.ring-selected { outline: 3px solid #4f46e5; outline-offset: 2px; }
+  </style>
 </head>
-<body class="min-h-screen p-4 md:p-8 selection:bg-indigo-100 selection:text-indigo-900">
+<body class="text-slate-900 p-4 md:p-6 selection:bg-indigo-100 selection:text-indigo-900">
 
-    <div class="max-w-7xl mx-auto">
-        <!-- Header Section -->
-        <header class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 animate-fade-in">
-            <div class="flex items-center gap-6">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-200">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="16" x2="22" y1="11" y2="11"/></svg>
-                    </div>
-                    <div>
-                        <h1 class="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
-                            Contact Directory
-                            <span class="text-xs bg-indigo-50 text-indigo-600 border border-indigo-100 px-2.5 py-0.5 rounded-full font-bold">v2.0</span>
-                        </h1>
-                        <p class="text-slate-500 text-sm mt-0.5 font-medium" id="contact-count-summary">Syncing with Google Sheets...</p>
-                    </div>
-                </div>
+<div class="max-w-7xl mx-auto space-y-5">
 
-                <!-- Navigation -->
-                <nav class="hidden md:flex items-center bg-white/50 border border-slate-200/50 p-1 rounded-2xl">
-                    <a href="index.html" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold shadow-sm transition-all">Contacts</a>
-                    <a href="company.html" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-white text-sm font-bold transition-all">Companies</a>
-                    <a href="camhr.html" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-white text-sm font-bold transition-all">CamHR</a>
-                    <a href="mail.html" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-white text-sm font-bold transition-all">Mail Center</a>
-                </nav>
-            </div>
-            
-            <div class="flex items-center gap-3">
-                <button onclick="fetchSheetData()" class="group flex items-center gap-2 glass px-4 py-2.5 rounded-xl hover:bg-white transition-all text-sm font-bold text-slate-600">
-                    <svg id="refresh-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover:rotate-180 transition-transform duration-500 text-indigo-500"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
-                    Sync Sheet
-                </button>
-                <div class="h-8 w-px bg-slate-200"></div>
-                <button onclick="toggleModal(true)" class="flex items-center gap-2 glass px-4 py-2.5 rounded-xl hover:bg-white transition-all text-sm font-bold text-slate-600">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-                    Import
-                </button>
-                <button onclick="exportCSV()" class="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 text-sm font-bold">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                    Export
-                </button>
-            </div>
-        </header>
+  <!-- Header -->
+  <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 fade-in">
+    <div class="flex items-center gap-4">
+      <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-200 shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg>
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight flex items-center gap-2">
+          AI Post Generator
+          <span class="text-[10px] bg-violet-50 text-violet-600 border border-violet-100 px-2 py-0.5 rounded-full font-black uppercase tracking-wider">Beta</span>
+        </h1>
+        <p class="text-slate-500 text-sm font-medium">SeekFitJob · Rebrand, design & publish job posts to all platforms</p>
+      </div>
+    </div>
+    <nav class="flex items-center gap-2">
+      <a href="settings.html" class="flex items-center gap-2 glass px-4 py-2 rounded-xl text-slate-600 hover:text-indigo-600 text-sm font-bold transition-all">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        Settings
+      </a>
+      <a href="admin/index.html" class="flex items-center gap-2 glass px-4 py-2 rounded-xl text-slate-600 hover:text-indigo-600 text-sm font-bold transition-all">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="16" x2="22" y1="11" y2="11"/></svg>
+        Admin Panel
+      </a>
+    </nav>
+  </header>
 
-        <div class="flex flex-col lg:flex-row gap-8 items-start">
-            <!-- Sidebar: Position Filters -->
-            <aside class="w-full lg:w-80 lg:sticky lg:top-8 shrink-0 space-y-6">
-                <div class="glass p-6 rounded-3xl space-y-6">
-                    <div class="flex items-center justify-between">
-                        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Positions</h2>
-                        <button onclick="clearAllFilters()" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors uppercase tracking-wider">Reset All</button>
-                    </div>
-                    
-                    <div id="position-tags-container" class="flex flex-col gap-2.5 custom-scrollbar max-h-[65vh] overflow-y-auto pr-2">
-                        <!-- Shimmer loading tags -->
-                        <div class="h-10 w-full glass rounded-xl loading-shimmer"></div>
-                        <div class="h-10 w-full glass rounded-xl loading-shimmer opacity-80"></div>
-                        <div class="h-10 w-full glass rounded-xl loading-shimmer opacity-60"></div>
-                        <div class="h-10 w-full glass rounded-xl loading-shimmer opacity-40"></div>
-                    </div>
-                </div>
-                
-                <div class="glass p-6 rounded-3xl hidden lg:block">
-                    <div class="flex items-center gap-3 text-slate-500 text-xs font-medium">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-                        Tip: Filter candidates by their applied roles to narrow down your search.
-                    </div>
-                </div>
-            </aside>
-
-            <!-- Main Content Area -->
-            <main class="flex-grow w-full space-y-6">
-                <!-- Search Row -->
-                <div class="glass p-4 rounded-2xl flex flex-col md:flex-row gap-4 items-center">
-                    <div class="relative flex-grow w-full group">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                        <input 
-                            type="text" 
-                            id="search-input"
-                            placeholder="Search by name, email, or position..." 
-                            class="w-full pl-12 pr-10 py-3 bg-white border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 transition-all text-slate-800 placeholder:text-slate-400 font-medium"
-                            oninput="onSearchInput()"
-                        >
-                        <button id="clear-search" onclick="clearSearch()" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors hidden">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Table Container -->
-                <div class="glass rounded-3xl overflow-hidden shadow-xl shadow-indigo-100/20 border-white">
-                    <div class="overflow-x-auto custom-scrollbar">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-slate-50/50 border-b border-slate-100">
-                                    <th class="p-5 font-bold text-slate-400 text-[11px] uppercase tracking-widest">Candidate Info</th>
-                                    <th class="p-5 font-bold text-slate-400 text-[11px] uppercase tracking-widest">Contact Details</th>
-                                    <th class="p-5 font-bold text-slate-400 text-[11px] uppercase tracking-widest">Documents</th>
-                                    <th class="p-5 font-bold text-slate-400 text-[11px] uppercase tracking-widest text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="contacts-table-body">
-                                <!-- Skeleton loading rows -->
-                                <tr class="animate-pulse">
-                                    <td class="p-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-slate-100 rounded-xl"></div><div class="space-y-2"><div class="h-4 w-32 bg-slate-100 rounded"></div><div class="h-3 w-20 bg-slate-100/50 rounded"></div></div></div></td>
-                                    <td class="p-5"><div class="space-y-2"><div class="h-4 w-40 bg-slate-100 rounded"></div><div class="h-3 w-24 bg-slate-100/50 rounded"></div></div></td>
-                                    <td class="p-5"><div class="h-8 w-24 bg-slate-100 rounded-lg"></div></td>
-                                    <td class="p-5"><div class="h-8 w-8 bg-slate-100 rounded ml-auto"></div></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <div class="bg-slate-50/30 p-4 border-t border-slate-100 flex justify-between items-center px-6">
-                        <p id="showing-count" class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Syncing database...</p>
-                        <div class="flex gap-1.5 items-center">
-                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                            <span class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Cloud Connected</span>
-                        </div>
-                    </div>
-                </div>
-            </main>
+  <!-- Source Row -->
+  <div class="glass rounded-2xl p-4 fade-in">
+    <div class="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+      <div class="flex items-center gap-2 flex-grow">
+        <span class="text-slate-400 font-bold text-sm whitespace-nowrap shrink-0">t.me /</span>
+        <input id="channel-input" type="text" placeholder="source_channel_username"
+          class="flex-grow px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 font-medium text-slate-800 placeholder:text-slate-300 text-sm" />
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <div class="flex items-center bg-slate-100 rounded-xl p-1 gap-1">
+          <button id="btn-en" onclick="setLang('en')" class="px-3 py-1.5 rounded-lg text-sm font-bold transition-all bg-indigo-600 text-white shadow-sm">EN</button>
+          <button id="btn-km" onclick="setLang('km')" class="px-3 py-1.5 rounded-lg text-sm font-bold transition-all text-slate-500 hover:text-slate-700">KM</button>
         </div>
+        <button onclick="fetchPosts()" id="fetch-btn" class="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl hover:bg-indigo-700 active:scale-95 transition-all shadow-lg shadow-indigo-200 font-bold text-sm whitespace-nowrap">
+          <svg id="fetch-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+          Fetch Posts
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Two-Column Layout -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+    <!-- LEFT: Feed -->
+    <div class="glass rounded-3xl overflow-hidden fade-in flex flex-col">
+      <div class="p-5 border-b border-slate-100/80 flex items-center justify-between shrink-0">
+        <div>
+          <h2 class="font-bold text-slate-800">Source Feed</h2>
+          <p id="feed-subtitle" class="text-slate-400 text-xs font-medium mt-0.5">Enter a channel and click Fetch Posts</p>
+        </div>
+        <span id="post-badge" class="hidden text-[11px] font-black bg-indigo-50 text-indigo-600 border border-indigo-100 px-2.5 py-1 rounded-full"></span>
+      </div>
+      <div id="posts-list" class="p-4 space-y-2.5 custom-scrollbar overflow-y-auto" style="max-height:640px;">
+        <div id="feed-empty" class="flex flex-col items-center justify-center py-20 text-center">
+          <div class="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mb-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <p class="text-slate-400 text-sm font-semibold">No posts loaded</p>
+          <p class="text-slate-300 text-xs mt-1 font-medium">Enter a public Telegram channel username above</p>
+        </div>
+      </div>
     </div>
 
-    <!-- Import Modal -->
-    <div id="import-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 hidden items-center justify-center p-4 transition-all duration-300">
-        <div class="bg-white rounded-[2.5rem] w-full max-w-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-300 overflow-hidden border border-slate-100" id="modal-container">
-            <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <div>
-                    <h2 class="text-2xl font-bold text-slate-900 tracking-tight">Bulk Import</h2>
-                    <p class="text-slate-500 text-sm font-medium">Add multiple contacts at once</p>
-                </div>
-                <button onclick="toggleModal(false)" class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                </button>
-            </div>
-            <div class="p-8">
-                <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl mb-6 flex gap-4 items-start">
-                    <div class="bg-indigo-100 p-2 rounded-lg text-indigo-600">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-                    </div>
-                    <p class="text-sm text-indigo-900 leading-relaxed font-medium">
-                        Use <strong>Pipe (|)</strong> or <strong>Tab</strong> to separate fields. <br>
-                        <code class="bg-indigo-100/50 px-1.5 py-0.5 rounded text-indigo-700 font-bold text-[12px]">Name|Last Name|Email|Position|Phone|CV Links</code>
-                    </p>
-                </div>
-                <textarea 
-                    id="import-textarea"
-                    class="w-full h-64 p-5 bg-slate-50 border border-slate-100 rounded-3xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono text-[13px] text-slate-700 placeholder:text-slate-300 custom-scrollbar"
-                    placeholder="Chhuon|Sophat|email@gmail.com|Officer|086223706|https://link1.com"
-                ></textarea>
-            </div>
-            <div class="p-8 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-4">
-                <button onclick="toggleModal(false)" class="px-6 py-3 text-slate-400 hover:text-slate-600 font-bold text-sm transition-colors">Discard</button>
-                <button onclick="handleBulkImport()" class="px-8 py-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 font-bold text-sm">Start Processing</button>
-            </div>
+    <!-- RIGHT: Workspace -->
+    <div class="glass rounded-3xl overflow-hidden fade-in flex flex-col">
+      <div class="p-5 border-b border-slate-100/80 shrink-0">
+        <h2 class="font-bold text-slate-800">Workspace</h2>
+        <p class="text-slate-400 text-xs font-medium mt-0.5">Select → Generate → Pick image → Publish</p>
+      </div>
+
+      <div id="workspace-body" class="p-5 space-y-4 overflow-y-auto custom-scrollbar" style="max-height:640px;">
+
+        <!-- Empty state -->
+        <div id="ws-empty" class="flex flex-col items-center justify-center py-20 text-center">
+          <div class="w-14 h-14 bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-100 rounded-2xl flex items-center justify-center mb-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg>
+          </div>
+          <p class="text-slate-400 text-sm font-semibold">No post selected</p>
+          <p class="text-slate-300 text-xs mt-1 font-medium">Click "Use This" on any post from the feed</p>
         </div>
+
+        <!-- Original Post -->
+        <div id="ws-original" class="hidden">
+          <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Original Post</p>
+          <div id="original-text" class="text-slate-600 text-sm font-medium bg-slate-50 border border-slate-100 rounded-2xl p-4 leading-relaxed max-h-32 overflow-y-auto custom-scrollbar whitespace-pre-wrap"></div>
+        </div>
+
+        <!-- Generate Button -->
+        <div id="ws-generate-btn" class="hidden">
+          <button onclick="generatePost()" id="generate-btn" class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-6 py-3 rounded-2xl hover:from-indigo-700 hover:to-violet-700 active:scale-[0.98] transition-all shadow-lg shadow-indigo-200 font-bold text-sm">
+            <svg id="gen-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg>
+            Generate Branded Post
+          </button>
+        </div>
+
+        <!-- Generated Content -->
+        <div id="ws-generated" class="hidden space-y-2">
+          <div class="flex items-center justify-between">
+            <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest">Generated Content</p>
+            <button onclick="generatePost()" class="text-[11px] font-bold text-indigo-500 hover:text-indigo-700 flex items-center gap-1 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+              Regenerate
+            </button>
+          </div>
+          <textarea id="generated-text" oninput="updateCharCount()"
+            class="w-full h-44 p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200 text-slate-700 text-sm font-medium leading-relaxed resize-none custom-scrollbar"
+            placeholder="AI-generated content will appear here…"></textarea>
+          <p id="char-count" class="text-right text-[11px] text-slate-400 font-medium"></p>
+        </div>
+
+        <!-- ─── IMAGE PICKER ──────────────────────────────────────────────────── -->
+        <div id="ws-image" class="hidden space-y-3">
+          <div class="h-px bg-slate-100"></div>
+
+          <div class="flex items-center justify-between">
+            <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+              Image
+              <span class="text-slate-300 font-bold normal-case tracking-normal text-[10px]">optional · via Unsplash</span>
+            </p>
+            <button id="clear-img-btn" onclick="clearImage()" class="hidden text-[11px] font-bold text-rose-400 hover:text-rose-600 transition-colors flex items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              Remove
+            </button>
+          </div>
+
+          <!-- Selected image preview -->
+          <div id="selected-img-wrap" class="hidden rounded-2xl overflow-hidden relative shadow-md">
+            <img id="selected-img-el" class="w-full h-36 object-cover" alt="Selected image" />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+            <div class="absolute bottom-0 left-0 right-0 px-4 py-3 flex items-end justify-between">
+              <p id="selected-img-credit" class="text-white text-[10px] font-semibold opacity-90"></p>
+              <span class="bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Selected</span>
+            </div>
+          </div>
+
+          <!-- Search bar -->
+          <div class="flex gap-2">
+            <div class="relative flex-grow">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <input id="img-query" type="text" placeholder="office, hiring, team, career…"
+                class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 text-sm font-medium text-slate-700 placeholder:text-slate-300" />
+            </div>
+            <button onclick="searchImages()" id="img-search-btn" class="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold transition-all whitespace-nowrap">
+              <svg id="img-search-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              Search
+            </button>
+          </div>
+
+          <!-- Image Grid -->
+          <div id="img-grid" class="grid grid-cols-3 gap-2"></div>
+
+          <!-- Load more -->
+          <button id="img-load-more" onclick="loadMoreImages()" class="hidden w-full py-2 text-[11px] font-bold text-slate-400 hover:text-indigo-600 border border-slate-100 rounded-xl hover:border-indigo-100 transition-all">
+            Load more images
+          </button>
+        </div>
+        <!-- ─── END IMAGE PICKER ──────────────────────────────────────────────── -->
+
+        <!-- Publish Section -->
+        <div id="ws-publish" class="hidden space-y-4">
+          <div class="h-px bg-slate-100"></div>
+          <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest">Publish To</p>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <button onclick="togglePlatform('tg-channel')" id="btn-tg-channel" class="platform-btn active flex items-center gap-2.5 p-3 rounded-2xl font-bold text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+              TG Channel
+            </button>
+            <button onclick="togglePlatform('tg-group')" id="btn-tg-group" class="platform-btn active flex items-center gap-2.5 p-3 rounded-2xl font-bold text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              TG Group
+            </button>
+            <button onclick="togglePlatform('facebook')" id="btn-facebook" class="platform-btn active flex items-center gap-2.5 p-3 rounded-2xl font-bold text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+              Facebook
+            </button>
+            <button onclick="togglePlatform('linkedin')" id="btn-linkedin" class="platform-btn active flex items-center gap-2.5 p-3 rounded-2xl font-bold text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+              LinkedIn
+            </button>
+          </div>
+
+          <button onclick="publishAll()" id="publish-btn" class="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white px-6 py-3.5 rounded-2xl hover:bg-emerald-700 active:scale-[0.98] transition-all shadow-lg shadow-emerald-200 font-bold text-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+            Publish to Selected Platforms
+          </button>
+
+          <div id="publish-results" class="hidden space-y-2"></div>
+        </div>
+
+      </div>
     </div>
 
-    <script>
-        // State Management
-        let contacts = [];
-        let selectedPosition = 'All';
-        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/12l5s9TEQasVcggDjIlL7jLtL9HVdDwLEBufXDv5DGaw/export?format=csv&gid=62699452';
+  </div>
+</div>
 
-        // UI Selectors
-        const tableBody = document.getElementById('contacts-table-body');
-        const searchInput = document.getElementById('search-input');
-        const clearSearchBtn = document.getElementById('clear-search');
-        const tagsContainer = document.getElementById('position-tags-container');
-        const modal = document.getElementById('import-modal');
-        const modalContainer = document.getElementById('modal-container');
-        const importTextarea = document.getElementById('import-textarea');
-        const summaryText = document.getElementById('contact-count-summary');
-        const showingCountText = document.getElementById('showing-count');
-        const refreshIcon = document.getElementById('refresh-icon');
+<script>
+  // ─── State ───────────────────────────────────────────────────────────────────
+  let posts          = [];
+  let unsplashPhotos = [];
+  let imgPage        = 1;
+  let lastImgQuery   = '';
+  let selectedPostText   = '';
+  let selectedLang       = 'en';
+  let selectedImageUrl   = '';
+  let selectedImageCredit = '';
+  let activePlatforms = new Set(['tg-channel', 'tg-group', 'facebook', 'linkedin']);
 
-        // Data Fetching
-        async function fetchSheetData() {
-            try {
-                refreshIcon.classList.add('animate-spin');
-                summaryText.textContent = 'Fetching data from Google Sheets...';
-                
-                const response = await fetch(SHEET_URL);
-                const csvData = await response.text();
-                
-                Papa.parse(csvData, {
-                    header: true,
-                    skipEmptyLines: true,
-                    complete: function(results) {
-                        const mappedData = results.data.map((row, index) => ({
-                            id: Date.now() + index,
-                            timestamp: row['Timestamp'] || '',
-                            firstName: row['Name'] || '',
-                            lastName: row['Last Name'] || '',
-                            email: row['Email'] || '',
-                            position: row['Position'] || 'General',
-                            phone: row['Contact number'] || '',
-                            cvLink: row['Upload your CV'] || ''
-                        }));
-                        
-                        contacts = mappedData;
-                        renderUI();
-                        refreshIcon.classList.remove('animate-spin');
-                    }
-                });
-            } catch (error) {
-                console.error('Error fetching sheet data:', error);
-                summaryText.textContent = 'Failed to sync with Google Sheets.';
-                refreshIcon.classList.remove('animate-spin');
-            }
-        }
+  // ─── Init ────────────────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    const saved = localStorage.getItem('sfj_source_channel');
+    if (saved) document.getElementById('channel-input').value = saved;
+    document.getElementById('channel-input').addEventListener('keydown', e => { if (e.key === 'Enter') fetchPosts(); });
+    document.getElementById('img-query').addEventListener('keydown', e => { if (e.key === 'Enter') searchImages(); });
+    document.getElementById('generated-text').addEventListener('input', updateCharCount);
+  });
 
-        // Modal Management
-        function toggleModal(show) {
-            if (show) {
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-                setTimeout(() => {
-                    modalContainer.classList.remove('scale-95', 'opacity-0');
-                    modalContainer.classList.add('scale-100', 'opacity-100');
-                }, 10);
-            } else {
-                modalContainer.classList.remove('scale-100', 'opacity-100');
-                modalContainer.classList.add('scale-95', 'opacity-0');
-                setTimeout(() => {
-                    modal.classList.add('hidden');
-                    modal.classList.remove('flex');
-                    importTextarea.value = '';
-                }, 300);
-            }
-        }
+  // ─── Language ────────────────────────────────────────────────────────────────
+  function setLang(lang) {
+    selectedLang = lang;
+    const active   = 'px-3 py-1.5 rounded-lg text-sm font-bold transition-all bg-indigo-600 text-white shadow-sm';
+    const inactive = 'px-3 py-1.5 rounded-lg text-sm font-bold transition-all text-slate-500 hover:text-slate-700';
+    document.getElementById('btn-en').className = lang === 'en' ? active : inactive;
+    document.getElementById('btn-km').className = lang === 'km' ? active : inactive;
+  }
 
-        function handleBulkImport() {
-            const text = importTextarea.value.trim();
-            if (!text) return;
+  // ─── Platform toggles ────────────────────────────────────────────────────────
+  function togglePlatform(id) {
+    const btn = document.getElementById(`btn-${id}`);
+    if (activePlatforms.has(id)) {
+      activePlatforms.delete(id);
+      btn.classList.replace('active', 'inactive');
+    } else {
+      activePlatforms.add(id);
+      btn.classList.replace('inactive', 'active');
+    }
+  }
 
-            const lines = text.split('\n');
-            const newContacts = lines.map((line, index) => {
-                const parts = line.split(/[|\t]/).map(p => p.trim());
-                if (parts.length < 2) return null;
-                return {
-                    id: Date.now() + index,
-                    firstName: parts[0] || '',
-                    lastName: parts[1] || '',
-                    email: parts[2] || '',
-                    position: parts[3] || 'General',
-                    phone: parts[4] || '',
-                    cvLink: parts[5] || '' 
-                };
-            }).filter(Boolean);
+  // ─── Fetch Telegram posts ────────────────────────────────────────────────────
+  async function fetchPosts() {
+    const raw     = document.getElementById('channel-input').value.trim();
+    const channel = raw.replace(/^@/, '').replace(/^https?:\/\/t\.me\//, '').trim();
+    if (!channel) { alert('Please enter a Telegram channel username'); return; }
+    localStorage.setItem('sfj_source_channel', channel);
 
-            contacts = [...newContacts, ...contacts];
-            renderUI();
-            toggleModal(false);
-        }
+    const btn      = document.getElementById('fetch-btn');
+    const icon     = document.getElementById('fetch-icon');
+    const list     = document.getElementById('posts-list');
+    const subtitle = document.getElementById('feed-subtitle');
+    const badge    = document.getElementById('post-badge');
 
-        // Filtering & Search
-        function deleteContact(id) {
-            contacts = contacts.filter(c => c.id !== id);
-            renderUI();
-        }
+    btn.disabled = true;
+    icon.classList.add('spin');
+    subtitle.textContent = `Fetching @${channel}…`;
+    badge.classList.add('hidden');
 
-        function clearSearch() {
-            searchInput.value = '';
-            clearSearchBtn.classList.add('hidden');
-            renderContacts();
-        }
+    list.innerHTML = [1,2,3].map(() => `
+      <div class="animate-pulse glass rounded-2xl p-4 space-y-2">
+        <div class="h-3 bg-slate-100 rounded-full w-3/4"></div>
+        <div class="h-3 bg-slate-100 rounded-full w-full"></div>
+        <div class="h-3 bg-slate-100 rounded-full w-5/6"></div>
+        <div class="flex justify-between items-center mt-3">
+          <div class="h-3 bg-slate-100 rounded-full w-20"></div>
+          <div class="h-7 bg-slate-100 rounded-xl w-20"></div>
+        </div>
+      </div>`).join('');
 
-        function onSearchInput() {
-            if (searchInput.value) {
-                clearSearchBtn.classList.remove('hidden');
-            } else {
-                clearSearchBtn.classList.add('hidden');
-            }
-            renderContacts();
-        }
+    try {
+      const r    = await fetch(`/api/fetch-feed?channel=${encodeURIComponent(channel)}`);
+      const data = await r.json();
+      if (data.error) throw new Error(data.error);
+      if (!data.posts?.length) throw new Error('No text posts found in this channel');
 
-        function clearAllFilters() {
-            searchInput.value = '';
-            clearSearchBtn.classList.add('hidden');
-            selectedPosition = 'All';
-            renderUI();
-        }
+      posts = data.posts;
+      subtitle.textContent = `@${channel}`;
+      badge.textContent = `${posts.length} posts`;
+      badge.classList.remove('hidden');
 
-        function selectPosition(pos) {
-            selectedPosition = pos;
-            renderUI();
-        }
+      list.innerHTML = posts.map((p, i) => `
+        <div class="post-card glass rounded-2xl p-4 fade-in" style="animation-delay:${i * 0.04}s" id="pc-${i}" onclick="selectPost(${i})">
+          <p class="text-slate-700 text-[13px] font-medium leading-relaxed line-clamp-3 mb-3">${esc(p.text.substring(0, 220))}${p.text.length > 220 ? '…' : ''}</p>
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold text-slate-400">${fmtDate(p.datetime)}</span>
+            <span class="text-[11px] font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg border border-indigo-100 transition-colors">Use This →</span>
+          </div>
+        </div>`).join('');
+    } catch (err) {
+      list.innerHTML = `
+        <div class="text-center py-14 fade-in">
+          <div class="w-12 h-12 bg-rose-50 border border-rose-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+          </div>
+          <p class="text-slate-600 font-semibold text-sm">${esc(err.message)}</p>
+          <p class="text-slate-400 text-xs mt-1 font-medium">Make sure the channel is public and username is correct</p>
+        </div>`;
+      subtitle.textContent = 'Fetch failed';
+    }
+    btn.disabled = false;
+    icon.classList.remove('spin');
+  }
 
-        // UI Rendering
-        function renderUI() {
-            renderTags();
-            renderContacts();
-        }
+  // ─── Select post ─────────────────────────────────────────────────────────────
+  function selectPost(index) {
+    document.querySelectorAll('.post-card').forEach(el => el.classList.remove('selected'));
+    document.getElementById(`pc-${index}`)?.classList.add('selected');
 
-        function renderTags() {
-            const positionCounts = contacts.reduce((acc, c) => {
-                const pos = c.position || 'Unknown';
-                acc[pos] = (acc[pos] || 0) + 1;
-                return acc;
-            }, {});
+    selectedPostText = posts[index].text;
 
-            const sortedPositions = Object.keys(positionCounts).sort();
-            
-            let html = `
-                <button onclick="selectPosition('All')" class="group w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all border ${selectedPosition === 'All' ? 'bg-indigo-600 border-indigo-500 shadow-lg shadow-indigo-100 text-white' : 'glass border-slate-100 text-slate-500 hover:bg-white hover:border-indigo-100'}">
-                    <span class="text-sm font-bold tracking-tight">All Candidates</span>
-                    <span class="text-[10px] font-black px-2.5 py-1 rounded-lg ${selectedPosition === 'All' ? 'bg-indigo-500/50' : 'bg-slate-100 text-slate-400'}">${contacts.length}</span>
-                </button>
-            `;
+    hide('ws-empty'); hide('ws-generated'); hide('ws-image'); hide('ws-publish');
+    document.getElementById('publish-results').classList.add('hidden');
+    show('ws-original'); show('ws-generate-btn');
 
-            sortedPositions.forEach(pos => {
-                const count = positionCounts[pos];
-                const isActive = selectedPosition === pos;
-                html += `
-                    <button onclick="selectPosition('${pos}')" class="group w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all border ${isActive ? 'bg-indigo-600 border-indigo-500 shadow-lg shadow-indigo-100 text-white' : 'glass border-slate-100 text-slate-500 hover:bg-white hover:border-indigo-100'}">
-                        <span class="text-sm font-bold tracking-tight truncate pr-4 text-left">${pos}</span>
-                        <span class="text-[10px] font-black px-2.5 py-1 rounded-lg ${isActive ? 'bg-indigo-500/50' : 'bg-slate-100 text-slate-400'}">${count}</span>
-                    </button>
-                `;
-            });
+    document.getElementById('original-text').textContent = selectedPostText;
 
-            tagsContainer.innerHTML = html;
-        }
+    // Reset image state
+    clearImage(true);
+  }
 
-        function renderContacts() {
-            const searchTerm = searchInput.value.toLowerCase();
+  // ─── Generate post ───────────────────────────────────────────────────────────
+  async function generatePost() {
+    if (!selectedPostText) return;
+    const btn = document.getElementById('generate-btn');
+    btn.disabled = true;
+    btn.innerHTML = spinnerBtn('Generating…');
+    show('ws-generated'); hide('ws-image'); hide('ws-publish');
+    document.getElementById('generated-text').value = '';
+    document.getElementById('publish-results').classList.add('hidden');
+    clearImage(true);
 
-            const filtered = contacts.filter(c => {
-                const searchStr = `${c.firstName} ${c.lastName} ${c.email} ${c.position} ${c.phone}`.toLowerCase();
-                const matchesSearch = searchStr.includes(searchTerm);
-                const matchesPosition = selectedPosition === 'All' || c.position === selectedPosition;
-                return matchesSearch && matchesPosition;
-            });
+    try {
+      const r    = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ post: selectedPostText, language: selectedLang }),
+      });
+      const data = await r.json();
+      if (data.error) throw new Error(data.error);
 
-            summaryText.textContent = `${contacts.length} total entries synced from cloud`;
-            showingCountText.textContent = `Showing ${filtered.length} results found`;
+      document.getElementById('generated-text').value = data.content;
+      updateCharCount();
 
-            if (filtered.length === 0) {
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="4" class="p-20 text-center">
-                            <div class="flex flex-col items-center animate-fade-in">
-                                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-6 text-slate-300">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                                </div>
-                                <h3 class="text-xl font-bold text-slate-900 mb-2">No candidates found</h3>
-                                <p class="text-slate-500 max-w-xs text-sm font-medium">We couldn't find any results matching your current search or filter criteria.</p>
-                                <button onclick="clearAllFilters()" class="mt-8 px-6 py-2.5 bg-indigo-50 text-indigo-600 rounded-xl font-bold text-sm hover:bg-indigo-100 transition-all border border-indigo-100">Clear Search</button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
+      // Auto-populate image search query from the generated post
+      document.getElementById('img-query').value = extractImgQuery(data.content);
 
-            tableBody.innerHTML = filtered.map((c, i) => {
-                const cvLinks = c.cvLink ? c.cvLink.split(/[,|\n]/).map(l => l.trim()).filter(l => l.length > 0) : [];
-                const initials = (c.firstName[0] || '') + (c.lastName[0] || '');
-                
-                const cvButtonsHtml = cvLinks.length > 0 
-                    ? cvLinks.map((link, idx) => `
-                        <a href="${link}" target="_blank" class="group/cv inline-flex items-center gap-2 bg-indigo-50 hover:bg-indigo-600 border border-indigo-100 text-indigo-600 hover:text-white px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M9 15h6"/><path d="M9 11h6"/></svg>
-                            ${cvLinks.length > 1 ? `CV ${idx + 1}` : 'View CV'}
-                        </a>
-                      `).join('')
-                    : `<span class="text-slate-400 text-[11px] italic font-bold px-2 py-1 bg-slate-100 rounded-lg">No Document</span>`;
+      show('ws-image');
+      show('ws-publish');
 
-                return `
-                <tr class="border-b border-slate-100 hover:bg-indigo-50/30 transition-colors group animate-fade-in" style="animation-delay: ${i * 0.05}s">
-                    <td class="p-5">
-                        <div class="flex items-center gap-4">
-                            <div class="w-11 h-11 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-xs text-indigo-600 uppercase shadow-sm">
-                                ${initials}
-                            </div>
-                            <div>
-                                <div class="font-bold text-slate-900 tracking-tight">${c.firstName} ${c.lastName}</div>
-                                <div class="text-[10px] font-black text-indigo-500 uppercase tracking-widest mt-0.5">${c.position || 'General'}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="p-5">
-                        <div class="space-y-1.5">
-                            <div class="flex items-center gap-2 text-slate-700 text-sm font-semibold">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-400"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                                ${c.email}
-                            </div>
-                            <div class="flex items-center gap-2 text-slate-400 text-[11px] font-bold">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-slate-300"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                                ${c.phone}
-                            </div>
-                        </div>
-                    </td>
-                    <td class="p-5">
-                        <div class="flex flex-wrap gap-2">
-                            ${cvButtonsHtml}
-                        </div>
-                    </td>
-                    <td class="p-5 text-right">
-                        <button 
-                            onclick="deleteContact(${c.id})"
-                            class="w-9 h-9 glass rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-100 transition-all opacity-0 group-hover:opacity-100"
-                            title="Remove from view"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                        </button>
-                    </td>
-                </tr>
-                `;
-            }).join('');
-        }
+      // Auto-search images
+      await searchImages(true);
 
-        function exportCSV() {
-            const headers = "First Name,Last Name,Email,Position,Phone,CV Link\n";
-            const csv = contacts.map(c => `"${c.firstName}","${c.lastName}","${c.email}","${c.position}","${c.phone}","${c.cvLink}"`).join('\n');
-            const blob = new Blob([headers + csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.setAttribute('hidden', '');
-            a.setAttribute('href', url);
-            a.setAttribute('download', `SeekFit_Contacts_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
+    } catch (err) {
+      document.getElementById('generated-text').value = `⚠️ Error: ${err.message}\n\nMake sure OPENAI_API_KEY is set in Vercel environment variables.`;
+      show('ws-publish');
+    }
 
-        // Initialize Application
-        document.addEventListener('DOMContentLoaded', fetchSheetData);
-    </script>
+    btn.disabled = false;
+    btn.innerHTML = starBtn('Generate Branded Post');
+  }
+
+  // ─── Unsplash image search ───────────────────────────────────────────────────
+  async function searchImages(auto = false) {
+    const query = document.getElementById('img-query').value.trim();
+    if (!query) return;
+
+    if (!auto) { imgPage = 1; }
+    lastImgQuery = query;
+
+    const searchBtn  = document.getElementById('img-search-btn');
+    const searchIcon = document.getElementById('img-search-icon');
+    const grid       = document.getElementById('img-grid');
+    const loadMore   = document.getElementById('img-load-more');
+
+    searchBtn.disabled = true;
+    searchIcon.classList.add('spin');
+
+    if (imgPage === 1) {
+      unsplashPhotos = [];
+      grid.innerHTML = [1,2,3,4,5,6].map((_, i) => `
+        <div class="animate-pulse bg-slate-100 rounded-xl h-20 fade-in" style="animation-delay:${i*0.04}s"></div>`).join('');
+      loadMore.classList.add('hidden');
+    }
+
+    try {
+      const r    = await fetch(`/api/search-unsplash?query=${encodeURIComponent(query)}&per_page=9&page=${imgPage}`);
+      const data = await r.json();
+
+      if (data.error) throw new Error(data.error);
+
+      const newPhotos = data.photos || [];
+      if (imgPage === 1) unsplashPhotos = newPhotos;
+      else unsplashPhotos = [...unsplashPhotos, ...newPhotos];
+
+      renderImageGrid();
+
+      loadMore.classList.toggle('hidden', !newPhotos.length || data.total_pages <= imgPage);
+    } catch (err) {
+      if (imgPage === 1) {
+        grid.innerHTML = `<p class="col-span-3 text-center py-4 text-rose-500 text-xs font-semibold">${esc(err.message)}</p>`;
+      }
+    }
+
+    searchBtn.disabled = false;
+    searchIcon.classList.remove('spin');
+  }
+
+  async function loadMoreImages() {
+    imgPage++;
+    document.getElementById('img-query').value = lastImgQuery;
+    await searchImages(true);
+  }
+
+  function renderImageGrid() {
+    const grid = document.getElementById('img-grid');
+    grid.innerHTML = unsplashPhotos.map((p, i) => {
+      const isSelected = selectedImageUrl === p.regular;
+      return `
+        <div class="img-thumb rounded-xl overflow-hidden relative ${isSelected ? 'ring-selected' : ''}" id="img-${i}" onclick="selectImage(${i})" title="${esc(p.alt)}">
+          <img src="${p.thumb}" alt="${esc(p.alt)}" class="w-full h-20 object-cover"
+               style="background:${p.color}" loading="lazy" />
+          ${isSelected ? `
+            <div class="absolute inset-0 bg-indigo-600/20 flex items-center justify-center">
+              <div class="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+              </div>
+            </div>` : `<div class="absolute inset-0 bg-black/0 hover:bg-black/10 transition-all"></div>`}
+        </div>`;
+    }).join('');
+  }
+
+  async function selectImage(index) {
+    const photo = unsplashPhotos[index];
+    selectedImageUrl    = photo.regular;
+    selectedImageCredit = `Photo by ${photo.photographer} on Unsplash`;
+
+    document.getElementById('selected-img-el').src          = photo.regular;
+    document.getElementById('selected-img-credit').textContent = selectedImageCredit;
+    show('selected-img-wrap');
+    show('clear-img-btn');
+
+    renderImageGrid();
+
+    // Trigger download event (Unsplash API requirement)
+    fetch(`/api/search-unsplash?trigger_download=${encodeURIComponent(photo.download_location)}`).catch(() => {});
+  }
+
+  function clearImage(silent = false) {
+    selectedImageUrl    = '';
+    selectedImageCredit = '';
+    hide('selected-img-wrap');
+    hide('clear-img-btn');
+    if (!silent) renderImageGrid();
+  }
+
+  // ─── Publish ──────────────────────────────────────────────────────────────────
+  async function publishAll() {
+    const content = document.getElementById('generated-text').value.trim();
+    if (!content) { alert('No content to publish. Generate a post first.'); return; }
+    if (activePlatforms.size === 0) { alert('Please select at least one platform.'); return; }
+
+    const btn       = document.getElementById('publish-btn');
+    const resultsEl = document.getElementById('publish-results');
+    btn.disabled    = true;
+    btn.innerHTML   = spinnerBtn('Publishing…');
+    resultsEl.innerHTML = '<p class="text-[11px] font-bold text-slate-400">Publishing to selected platforms…</p>';
+    resultsEl.classList.remove('hidden');
+
+    const photoUrl  = selectedImageUrl || null;
+    const tgTargets = [];
+    if (activePlatforms.has('tg-channel')) tgTargets.push('channel');
+    if (activePlatforms.has('tg-group'))   tgTargets.push('group');
+
+    const tasks = [];
+    if (tgTargets.length) tasks.push({ label: 'Telegram', api: '/api/post-telegram', body: { text: content, targets: tgTargets, photoUrl }, check: d => d.results?.every(r => r.success), errMsg: d => d.results?.map(r => r.error).filter(Boolean).join(', ') || d.error });
+    if (activePlatforms.has('facebook'))   tasks.push({ label: 'Facebook', api: '/api/post-facebook', body: { message: content, photoUrl }, check: d => !!d.success, errMsg: d => d.error });
+    if (activePlatforms.has('linkedin'))   tasks.push({ label: 'LinkedIn', api: '/api/post-linkedin', body: { text: content, photoUrl }, check: d => !!d.success, errMsg: d => d.error });
+
+    const settled = await Promise.allSettled(
+      tasks.map(async task => {
+        const r    = await fetch(task.api, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(task.body) });
+        const data = await r.json();
+        return { task, data, ok: task.check(data), err: task.errMsg(data) };
+      })
+    );
+
+    const icons = {
+      Telegram: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>`,
+      Facebook: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`,
+      LinkedIn: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>`,
+    };
+    const checkSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
+    const xSvg     = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`;
+
+    resultsEl.innerHTML = settled.map((res, i) => {
+      const task    = tasks[i];
+      const ok      = res.status === 'fulfilled' && res.value.ok;
+      const errText = res.status === 'rejected' ? res.reason.message : (res.value?.err || '');
+      return `
+        <div class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border fade-in ${ok ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-rose-50 border-rose-100 text-rose-600'}">
+          <span>${icons[task.label] || ''}</span>
+          <div class="flex-1 min-w-0">
+            <span class="text-xs font-bold">${task.label}</span>
+            ${errText ? `<span class="text-[10px] block opacity-70 truncate">${esc(errText)}</span>` : ''}
+          </div>
+          <span class="${ok ? 'bg-emerald-100' : 'bg-rose-100'} p-1 rounded-lg">${ok ? checkSvg : xSvg}</span>
+        </div>`;
+    }).join('');
+
+    btn.disabled  = false;
+    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg> Publish to Selected Platforms`;
+  }
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────────
+  function show(id) { document.getElementById(id)?.classList.remove('hidden'); }
+  function hide(id) { document.getElementById(id)?.classList.add('hidden'); }
+
+  function updateCharCount() {
+    const len = document.getElementById('generated-text').value.length;
+    const el  = document.getElementById('char-count');
+    el.textContent = `${len.toLocaleString()} characters`;
+    el.className   = `text-right text-[11px] font-medium ${len > 3000 ? 'text-amber-500' : 'text-slate-400'}`;
+  }
+
+  function esc(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function fmtDate(dt) {
+    if (!dt) return '';
+    try { return new Date(dt).toLocaleDateString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }); }
+    catch { return ''; }
+  }
+
+  function extractImgQuery(text) {
+    const line = text.split('\n').find(l => l.replace(/[\u{1F000}-\u{1FFFF}]/gu, '').trim().length > 4) || text;
+    const clean = line.replace(/[\u{1F000}-\u{1FFFF}]/gu, '').replace(/[^\w\s]/g, ' ').trim().substring(0, 35);
+    return `${clean} professional office`.trim();
+  }
+
+  function spinnerBtn(label) {
+    return `<svg class="spin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg> ${label}`;
+  }
+
+  function starBtn(label) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg> ${label}`;
+  }
+</script>
 </body>
-</html>
+</html>
