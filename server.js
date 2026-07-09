@@ -51,7 +51,8 @@ function readBody(req) {
 
 // ── Main server ──────────────────────────────────────────────────────────────
 const server = http.createServer(async (req, nodeRes) => {
-  const parsed   = url.parse(req.url, true);
+  const baseURL = `http://${req.headers.host || 'localhost'}`;
+  const parsed = new URL(req.url, baseURL);
   const pathname = decodeURIComponent(parsed.pathname);
 
   // ── API routes ─────────────────────────────────────────────────────────────
@@ -65,7 +66,7 @@ const server = http.createServer(async (req, nodeRes) => {
       return;
     }
 
-    req.query = parsed.query;
+    req.query = Object.fromEntries(parsed.searchParams.entries());
     req.body  = await readBody(req);
 
     const res = makeRes(nodeRes);
@@ -83,30 +84,47 @@ const server = http.createServer(async (req, nodeRes) => {
     return;
   }
 
-  // ── Static files ───────────────────────────────────────────────────────────
-  let filePath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname);
-
-  // Try adding .html extension for extensionless paths
-  if (!fs.existsSync(filePath) && !path.extname(filePath)) {
-    filePath += '.html';
+  // ── Static files (React App & Public Assets) ───────────────────────────────
+  let clientDir = path.join(__dirname, 'client', 'dist');
+  let filePath;
+  
+  if (pathname.startsWith('/public/')) {
+    filePath = path.join(__dirname, pathname);
+  } else {
+    filePath = path.join(clientDir, pathname === '/' ? 'index.html' : pathname);
   }
 
+  // If file exists, serve it
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
     const ext      = path.extname(filePath).toLowerCase();
     const mimeType = MIME[ext] || 'application/octet-stream';
     nodeRes.writeHead(200, { 'Content-Type': mimeType });
     fs.createReadStream(filePath).pipe(nodeRes);
   } else {
-    nodeRes.writeHead(404, { 'Content-Type': 'text/plain' });
-    nodeRes.end('404 Not Found');
+    // SPA Fallback: route everything else to index.html
+    const fallbackPath = path.join(clientDir, 'index.html');
+    if (fs.existsSync(fallbackPath)) {
+      nodeRes.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      fs.createReadStream(fallbackPath).pipe(nodeRes);
+    } else {
+      nodeRes.writeHead(404, { 'Content-Type': 'text/plain' });
+      nodeRes.end('404 Not Found');
+    }
   }
 });
 
-server.listen(PORT, () => {
-  console.log('');
-  console.log('  ✅  SeekFitJob AI Post Generator');
-  console.log(`  🌐  Open: http://localhost:${PORT}`);
-  console.log('  ⚙️   Settings: http://localhost:' + PORT + '/settings');
-  console.log('  🛑  Stop: press Ctrl + C');
-  console.log('');
+const { initDB } = require('./api/db');
+
+initDB().then(() => {
+  server.listen(PORT, () => {
+    console.log('');
+    console.log('  ✅  SeekFitJob AI Post Generator');
+    console.log(`  🌐  Open: http://localhost:${PORT}`);
+    console.log('  ⚙️   Settings: http://localhost:' + PORT + '/settings');
+    console.log('  🛑  Stop: press Ctrl + C');
+    console.log('');
+  });
+}).catch(err => {
+  console.error('Failed to initialize database:', err);
+  process.exit(1);
 });

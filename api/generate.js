@@ -1,4 +1,5 @@
 const OpenAI = require('openai');
+const { getPool } = require('./db');
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -8,8 +9,25 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { post, language } = req.body;
+  const { post, language, post_id, channel, override } = req.body;
   if (!post) return res.status(400).json({ error: 'Post content is required' });
+
+  const pool = getPool();
+
+  if (pool && post_id && channel && !override) {
+    // Check for existing generation
+    try {
+      const [rows] = await pool.query(
+        'SELECT id FROM generated_posts WHERE post_id = ? AND channel = ?',
+        [post_id, channel]
+      );
+      if (rows.length > 0) {
+        return res.status(409).json({ error: 'Duplicate', message: 'This post has already been generated. Do you want to overwrite it?' });
+      }
+    } catch (dbErr) {
+      console.error('DB Error checking duplicates:', dbErr);
+    }
+  }
 
   if (!process.env.OPENAI_API_KEY) {
     return res.status(500).json({ error: 'OpenAI API key is not configured' });
@@ -22,10 +40,13 @@ module.exports = async (req, res) => {
     : 'Write the post in English.';
 
   try {
+    const displayPostId = String(post_id).includes('/') ? String(post_id).split('/').pop() : post_id;
+
     const completion = await client.chat.completions.create({
       model: 'gpt-4o',
       temperature: 0.7,
       max_tokens: 1200,
+      response_format: { type: "json_object" },
       messages: [
         {
           role: 'system',
@@ -33,27 +54,49 @@ module.exports = async (req, res) => {
 
 Your task: take a raw job post from another source and rebrand it fully under SeekFitJob's identity.
 
-SeekFitJob Brand Identity:
-- Name: SeekFitJob
-- Tagline: "Seek your fit, move a great forward."
-- Website: seekfitjob.com
-- HR Email: hr@seekfitjob.com
-- Phone: 085 558 404
-- Telegram: t.me/SeekFitJobKH
-- Facebook: facebook.com/SeekfitJob
-- LinkedIn: linkedin.com/company/seekfitjob
-- Tone: Professional, warm, motivating, clear
+Goal:
+Make each post suitable for Telegram/Facebook job posting. Keep it short, clean, and professional.
 
-Output format for social media (Telegram / Facebook / LinkedIn):
-1. Open with a strong emoji + job title headline
-2. Brief engaging intro (1–2 sentences)
-3. Key responsibilities (3–5 bullet points with ✅ or 📌)
-4. Requirements / qualifications (3–5 bullet points with 🎯 or ✔️)
-5. What we offer / benefits (if available)
-6. Apply/contact CTA pointing to SeekFitJob channels
-7. Relevant hashtags on the last line (#JobAlert #SeekFitJob #Cambodia etc.)
+Rules:
+1. Each post should be around 80–120 words only.
+2. Do not invent responsibilities, requirements, or benefits if the original post did not provide them.
+3. If information is missing, keep the wording simple and general.
+4. Remove repetitive long introductions and unnecessary corporate-style paragraphs.
+5. For posts that are not real job vacancies, such as event, wellness, or awareness posts, convert them into short career/community content instead of forcing them into a job vacancy format.
+6. Keep the tone professional, warm, motivating, and clear.
+7. Use simple bullet points.
+8. Keep confirmed details only, such as position title, salary, location, working hours, contact, and benefits.
+9. Do NOT mention the original source channel or website in the post.
 
-Do NOT mention the original source channel or website.
+IMPORTANT: You must return a valid JSON object with EXACTLY two fields:
+1. "keyword": A single highly relevant visual search keyword for this job role (e.g., "office", "programmer", "marketing", "finance", "logistics"). Maximum 2 words.
+2. "post": The rebranded job post text.
+
+Preferred format for the "post" string:
+
+[Strong emoji] [Short job title or opportunity headline]
+
+[1 short sentence introducing the opportunity.]
+
+Open Position / Details:
+• ...
+
+Requirements / Ideal Candidate:
+• ...
+
+Benefits / Offer:
+• ...
+
+🔗 Apply your CV to:
+Telegram: @seekfitjob
+Email: hr@seekfitjob.com
+SEEKFITJOB_${displayPostId}
+——————————————
+TG Channel: t.me/SeekFitJobKH
+More jobs: www.seekfitjob.com
+
+Important:
+If the original post only has limited information, do not expand it too much. Keep it clean, short, and accurate.
 ${langInstruction}`,
         },
         {
@@ -63,7 +106,27 @@ ${langInstruction}`,
       ],
     });
 
-    return res.status(200).json({ content: completion.choices[0].message.content });
+    let generatedContent = '';
+    let imageKeyword = '';
+    
+    try {
+      const responseData = JSON.parse(completion.choices[0].message.content);
+      generatedContent = responseData.post || '';
+      imageKeyword = responseData.keyword || '';
+    } catch(e) {
+      // Fallback if parsing fails
+      generatedContent = completion.choices[0].message.content;
+    }
+
+    // Save generated content to database
+    if (pool && post_id && channel) {
+      await pool.query(
+        'INSERT INTO generated_posts (post_id, channel, generated_text, is_manual, image_keyword) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE generated_text = VALUES(generated_text), is_manual = FALSE, image_keyword = VALUES(image_keyword)',
+        [post_id, channel, generatedContent, false, imageKeyword]
+      );
+    }
+
+    return res.status(200).json({ content: generatedContent, keyword: imageKeyword });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }

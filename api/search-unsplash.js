@@ -17,12 +17,13 @@ module.exports = async (req, res) => {
     return res.status(200).json({ ok: true });
   }
 
-  const { query, page = 1, per_page = 9 } = req.query;
-  if (!query) return res.status(400).json({ error: 'Search query is required' });
+  const { query, q, page = 1, per_page = 9 } = req.query;
+  const searchQuery = query || q;
+  if (!searchQuery) return res.status(400).json({ error: 'Search query is required' });
 
   try {
     const r = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=${per_page}&page=${page}&orientation=landscape`,
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(searchQuery)}&per_page=${per_page}&page=${page}&orientation=landscape`,
       { headers: { Authorization: `Client-ID ${key}` } }
     );
 

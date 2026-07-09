@@ -1,3 +1,5 @@
+const { getPool } = require('./db');
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -6,8 +8,10 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { text, targets = ['channel'], photoUrl } = req.body;
+  const { text, targets = ['channel'], image: photoUrl, post_id = 'unknown' } = req.body;
   if (!text) return res.status(400).json({ error: 'Text content is required' });
+
+  const pool = getPool();
 
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) return res.status(500).json({ error: 'Telegram bot token is not configured' });
@@ -31,10 +35,23 @@ module.exports = async (req, res) => {
         // Send photo with caption (Telegram caption limit: 1024 chars)
         const caption = text.length <= 1024 ? text : text.substring(0, 1020) + '…';
 
+        let form, isFormData = false;
+        if (photoUrl.startsWith('data:image')) {
+          const base64Data = photoUrl.replace(/^data:image\/\w+;base64,/, '');
+          const buffer = Buffer.from(base64Data, 'base64');
+          const blob = new Blob([buffer], { type: 'image/png' });
+          form = new FormData();
+          form.append('chat_id', chatId);
+          form.append('photo', blob, 'seekfitpost-generated.png');
+          form.append('caption', caption);
+          form.append('parse_mode', 'HTML');
+          isFormData = true;
+        }
+
         const photoResp = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          headers: isFormData ? {} : { 'Content-Type': 'application/json' },
+          body: isFormData ? form : JSON.stringify({
             chat_id: chatId,
             photo: photoUrl,
             caption,
@@ -58,6 +75,12 @@ module.exports = async (req, res) => {
         }
 
         results.push({ target, success: photoData.ok, error: photoData.ok ? null : photoData.description });
+        if (photoData.ok && pool) {
+          await pool.query(
+            'INSERT INTO published_history (post_id, platform, external_id, text, image_url) VALUES (?, ?, ?, ?, ?)',
+            [post_id, `telegram_${target}`, photoData.result?.message_id, text, photoUrl ? (photoUrl.startsWith('data:image') ? 'attached' : photoUrl) : null]
+          );
+        }
       } else {
         // Text-only message
         const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -72,6 +95,12 @@ module.exports = async (req, res) => {
         });
         const d = await r.json();
         results.push({ target, success: d.ok, message_id: d.result?.message_id, error: d.ok ? null : d.description });
+        if (d.ok && pool) {
+          await pool.query(
+            'INSERT INTO published_history (post_id, platform, external_id, text, image_url) VALUES (?, ?, ?, ?, ?)',
+            [post_id, `telegram_${target}`, d.result?.message_id, text, null]
+          );
+        }
       }
     } catch (err) {
       results.push({ target, success: false, error: err.message });

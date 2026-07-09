@@ -1,3 +1,5 @@
+const { getPool } = require('./db');
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -6,8 +8,10 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { text, photoUrl } = req.body;
+  const { text, image: photoUrl, post_id = 'unknown' } = req.body;
   if (!text) return res.status(400).json({ error: 'Text content is required' });
+
+  const pool = getPool();
 
   const token = process.env.LINKEDIN_ACCESS_TOKEN;
   const orgId = process.env.LINKEDIN_ORGANIZATION_ID;
@@ -52,12 +56,18 @@ module.exports = async (req, res) => {
       const uploadUrl    = registerData.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
       const assetUrn     = registerData.value.asset;
 
-      // ── Step 2: Download image and upload to LinkedIn ───────────────────────
-      const imgResp = await fetch(photoUrl);
-      if (!imgResp.ok) throw new Error('Failed to fetch image from Unsplash');
-
-      const imgBuffer      = await imgResp.arrayBuffer();
-      const imgContentType = imgResp.headers.get('content-type') || 'image/jpeg';
+      // ── Step 2: Upload image to LinkedIn ───────────────────────
+      let imgBuffer, imgContentType;
+      if (photoUrl.startsWith('data:image')) {
+        imgContentType = photoUrl.match(/^data:(image\/\w+);base64,/)[1];
+        const base64Data = photoUrl.replace(/^data:image\/\w+;base64,/, '');
+        imgBuffer = Buffer.from(base64Data, 'base64');
+      } else {
+        const imgResp = await fetch(photoUrl);
+        if (!imgResp.ok) throw new Error('Failed to fetch image from URL');
+        imgBuffer = await imgResp.arrayBuffer();
+        imgContentType = imgResp.headers.get('content-type') || 'image/jpeg';
+      }
 
       const uploadResp = await fetch(uploadUrl, {
         method: 'PUT',
@@ -110,13 +120,20 @@ module.exports = async (req, res) => {
     }
 
     const r    = await fetch('https://api.linkedin.com/v2/ugcPosts', { method: 'POST', headers, body: JSON.stringify(postBody) });
-    const data = await r.json();
+    const d = await r.json();
 
-    if (!r.ok) {
-      return res.status(r.status).json({ error: data.message || data.serviceErrorCode || 'LinkedIn API error' });
+    if (r.status !== 201) {
+      return res.status(400).json({ error: d.message || 'Failed to post to LinkedIn' });
     }
 
-    return res.status(200).json({ success: true, id: data.id });
+    if (pool) {
+      await pool.query(
+        'INSERT INTO published_history (post_id, platform, external_id, text, image_url) VALUES (?, ?, ?, ?, ?)',
+        [post_id, 'linkedin_native', d.id, text, photoUrl ? (photoUrl.startsWith('data:image') ? 'attached' : photoUrl) : null]
+      );
+    }
+
+    return res.status(200).json({ success: true, post_id: d.id });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
