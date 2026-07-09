@@ -5,6 +5,7 @@ import Feed from './components/Feed';
 import Composer from './components/Composer';
 import ConnectionCenter from './pages/ConnectionCenter';
 import SourceManager from './pages/SourceManager';
+import ProWorkspace from './pages/ProWorkspace';
 import Toast from './components/Toast';
 
 export const AppContext = React.createContext();
@@ -15,6 +16,9 @@ function App() {
   const [selectedPost, setSelectedPost] = useState(null);
   const [channel, setChannel] = useState(localStorage.getItem('sfj_source_channel') || '');
   const [language, setLanguage] = useState('en');
+
+  const [queuedPosts, setQueuedPosts] = useState([]);
+  const [isQueueMode, setIsQueueMode] = useState(false);
 
   const showToast = (msg, type = 'info') => {
     setToast({ msg, type, id: Date.now() });
@@ -27,13 +31,16 @@ function App() {
       posts, setPosts,
       selectedPost, setSelectedPost,
       channel, setChannel,
-      language, setLanguage
+      language, setLanguage,
+      queuedPosts, setQueuedPosts,
+      isQueueMode, setIsQueueMode
     }}>
       <BrowserRouter>
         <div className="flex h-screen w-full bg-gray-50 text-gray-800 font-sans overflow-hidden">
           <Sidebar />
           
           <Routes>
+            <Route path="/pro" element={<ProWorkspace />} />
             <Route path="/" element={
               <main className="flex-1 flex flex-col lg:flex-row h-full overflow-hidden relative">
                 <Feed status="unposted" />

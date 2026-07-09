@@ -4,7 +4,7 @@ import * as htmlToImage from 'html-to-image';
 import ImageTemplate from './ImageTemplate';
 
 export default function Composer() {
-  const { selectedPost, setSelectedPost, posts, setPosts, showToast, language, channel } = useContext(AppContext);
+  const { selectedPost, setSelectedPost, posts, setPosts, showToast, language, channel, queuedPosts, setQueuedPosts, isQueueMode } = useContext(AppContext);
   const [activeTab, setActiveTab] = useState('tg');
   const [loadingAI, setLoadingAI] = useState(false);
   
@@ -262,7 +262,19 @@ export default function Composer() {
       
       // Instantly remove the published post from the feed and close composer
       setPosts(posts.filter(p => p.id !== selectedPost.id));
-      setSelectedPost(null);
+      
+      if (isQueueMode) {
+        const nextQueue = queuedPosts.filter(p => p.id !== selectedPost.id);
+        setQueuedPosts(nextQueue);
+        if (nextQueue.length > 0) {
+          setSelectedPost(nextQueue[0]);
+        } else {
+          setSelectedPost(null);
+          showToast('Queue completed!', 'success');
+        }
+      } else {
+        setSelectedPost(null);
+      }
       
     } catch (err) {
       showToast('Publish failed: ' + err.message, 'error');
@@ -339,7 +351,7 @@ export default function Composer() {
             <svg className={savingManual ? 'spin' : ''} xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
             {savingManual ? 'Saving...' : 'Save Manual Draft'}
           </button>
-          <button onClick={generatePost} disabled={loadingAI} className="bg-gray-900 hover:bg-gray-800 text-white px-5 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-2 shadow-md shadow-gray-200">
+          <button id="btn-generate-ai" onClick={generatePost} disabled={loadingAI} className="bg-gray-900 hover:bg-gray-800 text-white px-5 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-2 shadow-md shadow-gray-200">
             <svg className={loadingAI ? 'spin' : ''} xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
             {loadingAI ? 'Generating AI Draft...' : 'Generate with AI'}
           </button>
@@ -479,7 +491,12 @@ export default function Composer() {
 
               {publishingGroups.length > 0 && (
                 <div className="mb-4">
-                  <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Quick Select Groups</h4>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Quick Select Groups</h4>
+                    {activeGroup && (
+                      <button onClick={() => { setSelectedAccounts([]); setActiveGroup(null); }} className="text-[10px] font-bold text-gray-400 hover:text-red-500 uppercase px-2 transition-colors">Clear Selection</button>
+                    )}
+                  </div>
                   <div className="flex gap-2 flex-wrap">
                     {publishingGroups.map(group => (
                       <button
@@ -488,14 +505,11 @@ export default function Composer() {
                           setSelectedAccounts(group.accounts);
                           setActiveGroup(group.id);
                         }}
-                        className={`text-xs font-bold px-3 py-1.5 rounded-md transition-colors ${activeGroup === group.id ? 'bg-brand-red text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                        className={`text-sm font-bold px-4 py-2.5 rounded-lg transition-all border-2 shadow-sm flex-1 text-center min-w-[120px] ${activeGroup === group.id ? 'bg-brand-red text-white border-brand-red' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'}`}
                       >
                         {group.name}
                       </button>
                     ))}
-                    {activeGroup && (
-                      <button onClick={() => { setSelectedAccounts([]); setActiveGroup(null); }} className="text-[10px] font-bold text-gray-400 hover:text-red-500 uppercase px-2">Clear</button>
-                    )}
                   </div>
                 </div>
               )}
@@ -558,6 +572,7 @@ export default function Composer() {
                 <span className="text-xs font-medium text-gray-700 leading-tight">I have carefully reviewed the generated content for accuracy and brand tone.</span>
               </label>
               <button 
+                id="btn-publish-all"
                 onClick={publishAll} 
                 disabled={publishing || !currentText || !checked || selectedAccounts.length === 0}
                 className="w-full bg-brand-red hover:bg-brand-redHover disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 rounded-lg font-bold text-sm transition-colors shadow-md flex items-center justify-center gap-2"

@@ -13,6 +13,10 @@ export default function Sidebar() {
       .catch(() => {});
   }, []);
 
+  if (location.pathname === '/pro') {
+    return null;
+  }
+
   return (
     <aside className="w-64 flex-shrink-0 flex flex-col hidden md:flex h-screen bg-white border-r border-gray-200 z-20 shadow-sm">
       <div className="p-6 pb-4 border-b border-gray-100">
@@ -31,6 +35,10 @@ export default function Sidebar() {
         <Link to="/" className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${currentView === 'studio' ? 'bg-brand-redSoft text-brand-red font-bold' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 font-medium'}`}>
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
           <span className="hidden lg:block text-sm">Content Studio</span>
+        </Link>
+        <Link to="/pro" className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${currentView === 'pro' ? 'bg-brand-red text-white font-bold' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 font-medium'}`}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>
+          <span className="hidden lg:block text-sm">Pro Mode ⚡</span>
         </Link>
         <Link to="/posted" className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${currentView === 'posted' ? 'bg-brand-redSoft text-brand-red font-bold' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 font-medium'}`}>
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>

@@ -1,18 +1,23 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { AppContext } from '../App';
 
-export default function Feed({ status = 'unposted' }) {
-  const { posts, setPosts, setSelectedPost, channel, setChannel, language, setLanguage, showToast } = useContext(AppContext);
+export default function Feed({ status = 'unposted', isPro = false }) {
+  const { posts, setPosts, selectedPost, setSelectedPost, channel, setChannel, language, setLanguage, showToast, queuedPosts, setQueuedPosts, isQueueMode, setIsQueueMode } = useContext(AppContext);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [sort, setSort] = useState('desc');
   const [limit, setLimit] = useState('50');
   const [savedChannels, setSavedChannels] = useState([]);
 
+  // Queue Selection State
+  const [selectedForQueue, setSelectedForQueue] = useState([]);
+
   // Bulk features state
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkText, setBulkText] = useState('');
   const [progress, setProgress] = useState({ active: false, percent: 0, text: '' });
+
+  const displayPosts = isQueueMode ? queuedPosts : posts;
 
   // Auto load from DB on mount or status change
   useEffect(() => {
@@ -151,6 +156,54 @@ When replacing [INSERT_POST_ID] with the POST_ID, only use the number part (e.g.
     navigator.clipboard.writeText(combined)
       .then(() => showToast(`Copied ${ungenerated.length} prompts!`, 'success'))
       .catch(() => showToast('Copy failed', 'error'));
+  };
+
+  // Cleanup function to scan and delete non-job posts
+  const handleAiCleanup = async () => {
+    if (posts.length === 0) return showToast('No posts to scan', 'error');
+    if (!confirm('This will scan the current unposted feed using AI and permanently delete any posts that are not real job vacancies. Are you sure you want to proceed?')) return;
+    
+    setGenerating(true);
+    let deletedCount = 0;
+    
+    try {
+      // Chunk posts in batches of 10
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < posts.length; i += CHUNK_SIZE) {
+        const chunk = posts.slice(i, i + CHUNK_SIZE);
+        setProgress({ 
+          active: true,
+          current: i + chunk.length > posts.length ? posts.length : i + chunk.length, 
+          total: posts.length, 
+          status: 'Scanning posts for junk...' 
+        });
+
+        const res = await fetch('/api/clean-database', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ posts: chunk })
+        });
+        
+        if (!res.ok) {
+          console.error('Batch failed');
+          continue;
+        }
+
+        const data = await res.json();
+        if (data.deleted_count) {
+          deletedCount += data.deleted_count;
+        }
+      }
+      
+      showToast(`Cleanup complete! Removed ${deletedCount} junk posts.`, 'success');
+      loadFeedFromDB(channel, sort, limit); // Refresh the feed immediately
+    } catch (err) {
+      console.error(err);
+      showToast('Cleanup process failed', 'error');
+    } finally {
+      setGenerating(false);
+      setProgress({ active: false, current: 0, total: 0, status: '' });
+    }
   };
 
   const handleBulkGenerate = async () => {
@@ -320,6 +373,7 @@ When replacing [INSERT_POST_ID] with the POST_ID, only use the number part (e.g.
             <div className="flex gap-2 mt-2 pt-2 border-t border-gray-100">
               <button onClick={handleCopyAll} disabled={posts.length === 0} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50 px-2 py-1.5 rounded-md font-bold text-[10px] transition-colors shadow-sm">Copy All Prompts</button>
               <button onClick={() => setShowBulkModal(true)} disabled={posts.length === 0} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50 px-2 py-1.5 rounded-md font-bold text-[10px] transition-colors shadow-sm">Bulk Import</button>
+              <button onClick={handleAiCleanup} disabled={posts.length === 0} className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 disabled:opacity-50 px-2 py-1.5 rounded-md font-bold text-[10px] transition-colors shadow-sm border border-red-200">Clean Junk</button>
               <button onClick={handleBulkGenerate} disabled={posts.length === 0} className="flex-1 bg-gray-900 hover:bg-gray-800 text-white disabled:opacity-50 px-2 py-1.5 rounded-md font-bold text-[10px] transition-colors shadow-sm">Bulk AI Generate</button>
             </div>
           )}
@@ -330,10 +384,32 @@ When replacing [INSERT_POST_ID] with the POST_ID, only use the number part (e.g.
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3 relative bg-gray-50/50">
         {loading ? (
           [1,2,3].map(i => <div key={i} className="animate-pulse bg-white border border-gray-200 rounded-xl h-24"></div>)
-        ) : posts.length > 0 ? (
-          posts.map((p, i) => (
-            <div key={i} onClick={() => setSelectedPost(p)} className="cursor-pointer transition-all border border-gray-200 bg-white hover:border-gray-300 hover:shadow-md rounded-xl p-4 flex flex-col gap-2">
-              <div className="flex justify-between items-start">
+        ) : displayPosts.length > 0 ? (
+          displayPosts.map((p, i) => (
+            <div key={i} onClick={() => setSelectedPost(p)} className={`cursor-pointer transition-all border bg-white hover:border-gray-300 hover:shadow-md rounded-xl p-4 flex flex-col gap-2 relative ${selectedPost?.id === p.id ? 'border-brand-red ring-1 ring-brand-red' : 'border-gray-200'}`}>
+              
+              {isPro && !isQueueMode && (
+                <div 
+                  className="absolute top-4 left-4 z-10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (selectedForQueue.includes(p)) {
+                      setSelectedForQueue(selectedForQueue.filter(item => item.id !== p.id));
+                    } else {
+                      setSelectedForQueue([...selectedForQueue, p]);
+                    }
+                  }}
+                >
+                  <input 
+                    type="checkbox" 
+                    checked={selectedForQueue.some(item => item.id === p.id)} 
+                    onChange={() => {}} 
+                    className="w-5 h-5 text-brand-red border-gray-300 rounded focus:ring-brand-red cursor-pointer"
+                  />
+                </div>
+              )}
+
+              <div className={`flex justify-between items-start ${isPro && !isQueueMode ? 'ml-8' : ''}`}>
                 <span className="text-[10px] font-bold text-gray-400">{new Date(p.datetime).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span>
                 {p.generated_text ? (
                   <span className="text-[9px] font-black bg-green-50 text-green-600 border border-green-200 px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1">
@@ -345,15 +421,18 @@ When replacing [INSERT_POST_ID] with the POST_ID, only use the number part (e.g.
                 )}
               </div>
               {(p.pub_image && p.pub_image !== 'attached') ? (
-                <img src={p.pub_image} className="w-full h-24 object-cover rounded-lg border border-gray-100" />
+                <img src={p.pub_image} className={`w-full h-24 object-cover rounded-lg border border-gray-100 ${isPro && !isQueueMode ? 'mt-2' : ''}`} />
               ) : (
-                p.image && <img src={p.image} className="w-full h-24 object-cover rounded-lg border border-gray-100" />
+                p.image && <img src={p.image} className={`w-full h-24 object-cover rounded-lg border border-gray-100 ${isPro && !isQueueMode ? 'mt-2' : ''}`} />
               )}
               <p className="text-gray-700 text-xs font-medium line-clamp-3 leading-relaxed">{p.pub_text || p.generated_text || p.text}</p>
-              <div className="flex gap-2 mt-2">
-                <button onClick={(e) => copyPrompt(e, p.text)} className="text-[10px] font-bold text-gray-500 bg-gray-100 border border-gray-200 hover:bg-gray-200 px-2 py-1.5 rounded transition-colors flex-1 shadow-sm">Copy Prompt</button>
-                <button className="text-[10px] font-bold text-brand-red bg-brand-redSoft border border-brand-red/20 px-2 py-1.5 rounded transition-colors flex-1 shadow-sm">Open Composer</button>
-              </div>
+              
+              {!isPro && (
+                <div className="flex gap-2 mt-2">
+                  <button onClick={(e) => copyPrompt(e, p.text)} className="text-[10px] font-bold text-gray-500 bg-gray-100 border border-gray-200 hover:bg-gray-200 px-2 py-1.5 rounded transition-colors flex-1 shadow-sm">Copy Prompt</button>
+                  <button className="text-[10px] font-bold text-brand-red bg-brand-redSoft border border-brand-red/20 px-2 py-1.5 rounded transition-colors flex-1 shadow-sm">Open Composer</button>
+                </div>
+              )}
             </div>
           ))
         ) : (
@@ -366,6 +445,41 @@ When replacing [INSERT_POST_ID] with the POST_ID, only use the number part (e.g.
           </div>
         )}
       </div>
+
+      {/* Floating Action Bar for Queue */}
+      {isPro && !isQueueMode && selectedForQueue.length > 0 && (
+        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-50 bg-gray-900 rounded-full shadow-2xl px-6 py-3 flex items-center gap-4 animate-in slide-in-from-bottom-5">
+          <span className="text-white font-bold text-sm">{selectedForQueue.length} posts selected</span>
+          <button 
+            onClick={() => {
+              setQueuedPosts(selectedForQueue);
+              setIsQueueMode(true);
+              setSelectedForQueue([]);
+              if (selectedForQueue.length > 0) {
+                setSelectedPost(selectedForQueue[0]);
+              }
+            }}
+            className="bg-brand-red hover:bg-brand-redHover text-white px-4 py-1.5 rounded-full text-xs font-bold transition-colors"
+          >
+            Work on Queue
+          </button>
+        </div>
+      )}
+
+      {isPro && isQueueMode && (
+        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-50 bg-gray-900 rounded-full shadow-2xl px-6 py-3 flex items-center gap-4 animate-in slide-in-from-bottom-5">
+          <span className="text-white font-bold text-sm">Queue Active ({queuedPosts.length} remaining)</span>
+          <button 
+            onClick={() => {
+              setIsQueueMode(false);
+              setQueuedPosts([]);
+            }}
+            className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-1.5 rounded-full text-xs font-bold transition-colors"
+          >
+            Cancel Queue
+          </button>
+        </div>
+      )}
 
       {/* Bulk Import Modal */}
       {showBulkModal && (
